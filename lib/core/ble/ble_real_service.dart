@@ -48,32 +48,44 @@ class BleRealService implements IBleService {
     _scanSub?.cancel();
     _scanSub = FlutterBluePlus.scanResults.listen((results) {
       final devices = results.map((r) {
-        final name = r.advertisementData.advName.isNotEmpty
-            ? r.advertisementData.advName
-            : r.device.platformName.isNotEmpty
-                ? r.device.platformName
-                : 'AIMO Device';
+        final advName = r.advertisementData.advName.trim();
+        final platName = r.device.platformName.trim();
+        final name = advName.isNotEmpty
+            ? advName
+            : (platName.isNotEmpty ? platName : 'Unknown Device (${r.device.remoteId.str.substring(0, 4)}...)');
+
         return BleDeviceInfo(
           id: r.device.remoteId.str,
           name: name,
           rssi: r.rssi,
         );
       }).toList();
+
+      // Sort: Prioritize AIMO or Mask devices first, then by RSSI signal strength
+      devices.sort((a, b) {
+        final aIsAimo = a.name.toUpperCase().contains('AIMO') || a.name.toUpperCase().contains('MASK');
+        final bIsAimo = b.name.toUpperCase().contains('AIMO') || b.name.toUpperCase().contains('MASK');
+        if (aIsAimo && !bIsAimo) return -1;
+        if (!aIsAimo && bIsAimo) return 1;
+        return b.rssi.compareTo(a.rssi);
+      });
+
       _scanResultsController.add(devices);
     });
 
     try {
+      // Ensure bluetooth adapter is checked
+      final adapterState = await FlutterBluePlus.adapterState.first;
+      if (adapterState != BluetoothAdapterState.on) {
+        // Bluetooth is off or unauthorized
+      }
+
+      // Start scan without restrictive UUID filter so all broadcast packets are captured
       await FlutterBluePlus.startScan(
-        withServices: [Guid(BleProtocol.serviceUuid)],
         timeout: timeout,
       );
-    } catch (_) {
-      // Fallback to unscoped scan if service UUID filter is strict
-      try {
-        await FlutterBluePlus.startScan(timeout: timeout);
-      } catch (e) {
-        _setConnectionState(BleConnectionState.disconnected);
-      }
+    } catch (e) {
+      _setConnectionState(BleConnectionState.disconnected);
     }
 
     FlutterBluePlus.isScanning.where((val) => !val).first.then((_) {

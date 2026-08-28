@@ -103,22 +103,31 @@ class _DeviceConnectionDialogState extends State<DeviceConnectionDialog> {
   }
 
   Widget _buildScanningView(BuildContext context) {
+    final isScanning = _connectionState == BleConnectionState.scanning;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const SizedBox(height: 20),
-        const SizedBox(
-          width: 36,
-          height: 36,
-          child: CircularProgressIndicator(
-            strokeWidth: 3.0,
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+        if (isScanning)
+          const SizedBox(
+            width: 36,
+            height: 36,
+            child: CircularProgressIndicator(
+              strokeWidth: 3.0,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          )
+        else
+          const Icon(
+            Icons.bluetooth_searching_rounded,
+            size: 40,
+            color: AppColors.primary,
           ),
-        ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         Text(
-          context.tr('searching'),
+          isScanning ? context.tr('searching') : context.tr('disconnected'),
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -136,6 +145,18 @@ class _DeviceConnectionDialogState extends State<DeviceConnectionDialog> {
           ),
         ),
         const SizedBox(height: 20),
+        if (!isScanning)
+          ElevatedButton.icon(
+            onPressed: _startScan,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: Text(context.tr('rescan')),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+          ),
       ],
     );
   }
