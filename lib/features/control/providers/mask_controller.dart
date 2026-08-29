@@ -28,6 +28,11 @@ class MaskController extends ChangeNotifier {
   StreamSubscription? _connSub;
   StreamSubscription? _statusSub;
   Timer? _countdownTimer;
+  Timer? _heartbeatWatchdogTimer;
+  DateTime _lastHeartbeatTime = DateTime.now();
+
+  final StreamController<String> _globalAlertController = StreamController<String>.broadcast();
+  Stream<String> get globalAlertStream => _globalAlertController.stream;
 
   BleConnectionState _connectionState = BleConnectionState.disconnected;
   BleDeviceInfo? _activeDevice;
@@ -69,6 +74,7 @@ class MaskController extends ChangeNotifier {
 
   MaskController() {
     _initBleListeners();
+    _startHeartbeatWatchdog();
   }
 
   // Getters
@@ -105,10 +111,12 @@ class MaskController extends ChangeNotifier {
 
   void _initBleListeners() {
     _connSub = _bleManager.connectionStateStream.listen((state) {
+      final oldState = _connectionState;
       _connectionState = state;
       _activeDevice = _bleManager.connectedDevice;
 
       if (state == BleConnectionState.connected) {
+        _lastHeartbeatTime = DateTime.now();
         // Reset to clean initial state on connection: Gear 1, Stopped, 12:00
         _currentGear = 1;
         _isPowerOn = false;
@@ -116,16 +124,44 @@ class MaskController extends ChangeNotifier {
         _isCombinationActive = false;
         _stopCountdown();
       } else if (state == BleConnectionState.disconnected) {
+        final wasRunningOrConnected = oldState == BleConnectionState.connected;
         _isPowerOn = false;
+        _isCombinationActive = false;
         _stopCountdown();
+
+        // If connection dropped unexpectedly, alert user
+        if (wasRunningOrConnected) {
+          _globalAlertController.add('deviceDisconnectedAlert');
+        }
       }
       notifyListeners();
     });
 
     _statusSub = _bleManager.statusReportStream.listen((report) {
-      // Update battery from MCU
+      _lastHeartbeatTime = DateTime.now();
+      final oldBattery = _batteryPercent;
       _batteryPercent = report.battery;
+
+      // Low battery warning threshold (<= 15%)
+      if (_batteryPercent <= 15 && oldBattery > 15) {
+        _globalAlertController.add('lowBatteryAlert');
+      }
+
       notifyListeners();
+    });
+  }
+
+  void _startHeartbeatWatchdog() {
+    _heartbeatWatchdogTimer?.cancel();
+    _heartbeatWatchdogTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (isConnected && isRunning) {
+        final timeSinceLastReport = DateTime.now().difference(_lastHeartbeatTime);
+        // If no status packet received for more than 7 seconds while running
+        if (timeSinceLastReport.inSeconds > 7) {
+          // Device might have dropped offline / out of battery
+          _globalAlertController.add('heartbeatTimeoutAlert');
+        }
+      }
     });
   }
 
@@ -199,7 +235,6 @@ class MaskController extends ChangeNotifier {
       _stopCountdown();
     } else {
       // Transition from Paused/Stopped -> Running
-      // If timer had reached 0, reset to 12 minutes
       if (_remainingSecondsTotal <= 0) {
         _remainingSecondsTotal = totalTreatmentSeconds;
       }
@@ -249,6 +284,7 @@ class MaskController extends ChangeNotifier {
         _isCombinationActive = false;
         _stopCountdown();
         _remainingSecondsTotal = totalTreatmentSeconds; // Reset to 12:00 for next session
+        _globalAlertController.add('treatmentCompleteAlert');
         notifyListeners();
 
         _bleManager.sendControl(
@@ -297,10 +333,21 @@ class MaskController extends ChangeNotifier {
     return success;
   }
 
-  Future<void> disconnect() async {
+  /// Unbind / Disconnect from current device
+  Future<void> unbindCurrentDevice() async {
     _isPowerOn = false;
+    _isCombinationActive = false;
     _stopCountdown();
     await _bleManager.disconnect();
+    _activeDevice = null;
+    _connectionState = BleConnectionState.disconnected;
+    _remainingSecondsTotal = totalTreatmentSeconds;
+    _currentGear = 1;
+    notifyListeners();
+  }
+
+  Future<void> disconnect() async {
+    await unbindCurrentDevice();
   }
 
   void saveCurrentPreset(String name) {
@@ -317,7 +364,6 @@ class MaskController extends ChangeNotifier {
 
   void applyPreset(SavedModePreset preset) {
     setMode(preset.mode);
-    // Allow preset gear after starting
     _currentGear = preset.gear;
     notifyListeners();
   }
@@ -331,7 +377,9 @@ class MaskController extends ChangeNotifier {
   void dispose() {
     _connSub?.cancel();
     _statusSub?.cancel();
-    _stopCountdown();
+    _countdownTimer?.cancel();
+    _heartbeatWatchdogTimer?.cancel();
+    _globalAlertController.close();
     super.dispose();
   }
 }

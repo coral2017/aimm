@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../connection/presentation/connected_device_dialog.dart';
+import '../../../connection/presentation/device_connection_dialog.dart';
 import '../../providers/mask_controller.dart';
 
 class StatusMetricCard extends StatelessWidget {
-  final VoidCallback onAddDeviceTap;
-
-  const StatusMetricCard({
-    super.key,
-    required this.onAddDeviceTap,
-  });
+  const StatusMetricCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +16,7 @@ class StatusMetricCard extends StatelessWidget {
     final metrics = controller.skinMetrics;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
@@ -41,7 +38,7 @@ class StatusMetricCard extends StatelessWidget {
               if (!isConnected)
                 // Unbound / Disconnected: + bind button (Figma 18:591)
                 InkWell(
-                  onTap: onAddDeviceTap,
+                  onTap: () => DeviceConnectionDialog.show(context),
                   borderRadius: BorderRadius.circular(16),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -62,7 +59,7 @@ class StatusMetricCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        context.tr('connect'),
+                        context.tr('bind'),
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -73,9 +70,9 @@ class StatusMetricCard extends StatelessWidget {
                   ),
                 )
               else
-                // Connected: Status Capsule (Battery, Connected, Timer) (Figma 0:810)
+                // Connected: Status Capsule (Battery, Connected, Timer) -> Opens ConnectedDeviceDialog (Figma 0:810)
                 InkWell(
-                  onTap: onAddDeviceTap,
+                  onTap: () => ConnectedDeviceDialog.show(context),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -140,7 +137,7 @@ class StatusMetricCard extends StatelessWidget {
                   ),
                 ),
 
-              // Right: Language Pill (🌐 EN)
+              // Right: Language Pill (🌐 EN / 简体)
               InkWell(
                 onTap: () => controller.cycleLanguage(),
                 borderRadius: BorderRadius.circular(12),

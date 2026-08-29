@@ -25,8 +25,8 @@ class CircularModeDial extends StatelessWidget {
     final isRunning = controller.isRunning;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
@@ -41,52 +41,55 @@ class CircularModeDial extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Card Title & Optional Combination Badge
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Beauty Hub',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              if (controller.isCombinationActive)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
+          // Card Title & Optional Combination Badge (Figma 0:810)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Beauty Hub',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.2,
                   ),
-                  child: Text(
-                    '${context.tr('combination')} ${controller.combinationCurrentStage + 1}/6',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryDark,
+                ),
+                if (controller.isCombinationActive)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${context.tr('combination')} ${controller.combinationCurrentStage + 1}/6',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryDark,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
-          // Central Circular Mode Selector (Figma 0:810 / 18:591)
+          // Central Circular Mode Selector (Figma 0:810 / 18:591 - Spanning edge-to-edge)
           Center(
             child: SizedBox(
-              width: 260,
-              height: 260,
+              width: 318,
+              height: 256,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Outer Faint Ring (Figma 0:863)
+                  // Outer Faint Ring (Figma 0:863, diameter 240)
                   Container(
-                    width: 210,
-                    height: 210,
+                    width: 236,
+                    height: 236,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
@@ -106,7 +109,7 @@ class CircularModeDial extends StatelessWidget {
                     );
                   }),
 
-                  // Center Start / Pause Button
+                  // Center Start / Pause Button (98x98)
                   _buildCenterActionButton(
                     context: context,
                     isRunning: isRunning,
@@ -129,68 +132,71 @@ class CircularModeDial extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
-          // Bottom Action Row (save & Combination)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Save Button (Figma 0:849)
-              InkWell(
-                onTap: onSaveTap,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.bookmark_outline_rounded,
-                        size: 16,
-                        color: AppColors.textPrimary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        context.tr('save'),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+          // Bottom Action Row (save & Combination) (Figma 0:849 & 0:830)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Save Button (Figma 0:849)
+                InkWell(
+                  onTap: onSaveTap,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.bookmark_outline_rounded,
+                          size: 16,
                           color: AppColors.textPrimary,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Text(
+                          context.tr('save'),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // Combination Button (Figma 0:830)
-              InkWell(
-                onTap: onCombinationTap,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.layers_outlined,
-                        size: 16,
-                        color: AppColors.textPrimary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        context.tr('combination'),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                // Combination Button (Figma 0:830)
+                InkWell(
+                  onTap: onCombinationTap,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.layers_outlined,
+                          size: 16,
                           color: AppColors.textPrimary,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Text(
+                          context.tr('combination'),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -213,7 +219,8 @@ class CircularModeDial extends StatelessWidget {
       MaskModeType.plumping => 210.0, // Top Left
     };
 
-    const double radius = 100.0;
+    // Radius tuned to 114 to span gracefully across card
+    const double radius = 114.0;
     final double angleInRadians = angleInDegrees * (math.pi / 180.0);
     final double x = radius * math.cos(angleInRadians);
     final double y = radius * math.sin(angleInRadians);
@@ -228,7 +235,7 @@ class CircularModeDial extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(4.0),
+            padding: const EdgeInsets.all(2.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
