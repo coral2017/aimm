@@ -47,22 +47,14 @@ class BleRealService implements IBleService {
     // Cancel existing scan subscription
     _scanSub?.cancel();
     _scanSub = FlutterBluePlus.scanResults.listen((results) {
-      final maskDevices = results.where((r) {
-        final advName = r.advertisementData.advName.trim().toUpperCase();
-        final platName = r.device.platformName.trim().toUpperCase();
-        final hasMaskName = advName.contains('AIMO') ||
-            advName.contains('MASK') ||
-            platName.contains('AIMO') ||
-            platName.contains('MASK');
-        final hasService = r.advertisementData.serviceUuids
-            .any((u) => u.toString().toUpperCase().contains('F760'));
-        return hasMaskName || hasService;
-      }).map((r) {
+      final devices = results.map((r) {
         final advName = r.advertisementData.advName.trim();
         final platName = r.device.platformName.trim();
         final name = advName.isNotEmpty
             ? advName
-            : (platName.isNotEmpty ? platName : 'AIMO Mask');
+            : (platName.isNotEmpty
+                ? platName
+                : 'BLE Device (${r.device.remoteId.str.substring(0, 4)}...)');
 
         return BleDeviceInfo(
           id: r.device.remoteId.str,
@@ -71,10 +63,29 @@ class BleRealService implements IBleService {
         );
       }).toList();
 
-      // Sort by RSSI signal strength
-      maskDevices.sort((a, b) => b.rssi.compareTo(a.rssi));
+      // Prioritize Mask devices (Alzmt, AIzmt, AIMO, Mask, ZMT), then sort by RSSI signal strength
+      devices.sort((a, b) {
+        final aUpper = a.name.toUpperCase();
+        final bUpper = b.name.toUpperCase();
+        final aIsMask = aUpper.contains('ALZMT') ||
+            aUpper.contains('AIZMT') ||
+            aUpper.contains('ZMT') ||
+            aUpper.contains('AIMO') ||
+            aUpper.contains('MASK') ||
+            aUpper.contains('AIM');
+        final bIsMask = bUpper.contains('ALZMT') ||
+            bUpper.contains('AIZMT') ||
+            bUpper.contains('ZMT') ||
+            bUpper.contains('AIMO') ||
+            bUpper.contains('MASK') ||
+            bUpper.contains('AIM');
 
-      _scanResultsController.add(maskDevices);
+        if (aIsMask && !bIsMask) return -1;
+        if (!aIsMask && bIsMask) return 1;
+        return b.rssi.compareTo(a.rssi);
+      });
+
+      _scanResultsController.add(devices);
     });
 
     try {

@@ -21,13 +21,35 @@ class StatusCapsuleBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Row(
         children: [
-          // Left Status Capsule
+          // Left: Dedicated Add Device (+) Button
+          Material(
+            color: AppColors.capsuleBackground,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              onTap: onConnectionTap,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.add_rounded,
+                  size: 22,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Center: Status Capsule (Battery, Connection, Timer)
           Expanded(
             child: InkWell(
               onTap: onConnectionTap,
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                 decoration: BoxDecoration(
                   color: AppColors.capsuleBackground,
                   borderRadius: BorderRadius.circular(16),
@@ -77,7 +99,7 @@ class StatusCapsuleBar extends StatelessWidget {
                       ],
                     ),
 
-                    // Timer / Minutes remaining
+                    // Timer / Minutes:Seconds
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -88,7 +110,7 @@ class StatusCapsuleBar extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          isConnected ? '${controller.remainingMinutes}min' : '--',
+                          controller.formattedTime,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -103,14 +125,14 @@ class StatusCapsuleBar extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
 
-          // Right Language Switcher Pill
+          // Right: Language Switcher Pill
           InkWell(
             onTap: () => controller.cycleLanguage(),
             borderRadius: BorderRadius.circular(16),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
               decoration: BoxDecoration(
                 color: AppColors.capsuleBackground,
                 borderRadius: BorderRadius.circular(16),
@@ -120,7 +142,7 @@ class StatusCapsuleBar extends StatelessWidget {
                 children: [
                   const Icon(
                     Icons.language_rounded,
-                    size: 16,
+                    size: 15,
                     color: AppColors.textSecondary,
                   ),
                   const SizedBox(width: 4),

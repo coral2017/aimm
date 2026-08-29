@@ -8,7 +8,7 @@ const Map<String, String> translationsZhCn = {
   'cancelConnection': '取消连接',
   'connect': '连接',
   'disconnect': '断开连接',
-  'noDevicesFound': '未发现面膜设备，请确保面膜设备已开机并处于蓝牙广播状态。',
+  'noDevicesFound': '主机如没开机，请先按开关键打开主机（蓝灯闪烁）。',
   'rescan': '重新扫描',
   'intensityLevel': '强度档位',
   'smoothness': '平滑细腻',

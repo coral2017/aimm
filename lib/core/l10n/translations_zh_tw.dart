@@ -8,7 +8,7 @@ const Map<String, String> translationsZhTw = {
   'cancelConnection': '取消連接',
   'connect': '連接',
   'disconnect': '斷開連接',
-  'noDevicesFound': '未發現面膜設備，請確保面膜設備已開機並處於藍牙廣播狀態。',
+  'noDevicesFound': '主機如沒開機，請先按開關鍵打開主機（藍燈閃爍）。',
   'rescan': '重新掃描',
   'intensityLevel': '強度檔位',
   'smoothness': '平滑細膩',

@@ -8,7 +8,7 @@ const Map<String, String> translationsEn = {
   'cancelConnection': 'Cancel',
   'connect': 'Connect',
   'disconnect': 'Disconnect',
-  'noDevicesFound': 'No mask devices found. Ensure the mask is powered on and within range.',
+  'noDevicesFound': 'If host is off, press power button to turn on (blue light flashing).',
   'rescan': 'Scan Again',
   'intensityLevel': 'Intensity Level',
   'smoothness': 'Smoothness',
