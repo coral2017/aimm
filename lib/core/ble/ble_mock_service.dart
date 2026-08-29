@@ -17,9 +17,9 @@ class BleMockService implements IBleService {
 
   // Simulated MCU state
   int _currentMode = 0; // Rejuvenating (0)
-  int _currentGear = 3; // Gear 3
-  bool _isPowerOn = true;
-  int _batteryPercent = 80;
+  int _currentGear = 1; // Gear 1 (Initial)
+  bool _isPowerOn = false; // Stopped (Initial)
+  final int _batteryPercent = 80;
   int _workMinutes = 12;
   int _workSeconds = 0;
 

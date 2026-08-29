@@ -21,7 +21,7 @@ class CircularModeDial extends StatelessWidget {
     final controller = context.watch<MaskController>();
     final currentMode = controller.currentMode;
     final isConnected = controller.isConnected;
-    final isPowerOn = controller.isPowerOn;
+    final isRunning = controller.isRunning;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -40,15 +40,36 @@ class CircularModeDial extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Card Title
-          const Text(
-            'Beauty Hub',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-              letterSpacing: -0.2,
-            ),
+          // Card Title & Optional Combination Badge
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Beauty Hub',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              if (controller.isCombinationActive)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${context.tr('combination')} ${controller.combinationCurrentStage + 1}/6',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ),
+            ],
           ),
 
           const SizedBox(height: 8),
@@ -84,11 +105,23 @@ class CircularModeDial extends StatelessWidget {
                     );
                   }),
 
-                  // Center Power / Start Button
-                  _buildCenterPowerButton(
+                  // Center Start / Pause Button
+                  _buildCenterActionButton(
                     context: context,
-                    isPowerOn: isPowerOn && isConnected,
-                    onTap: () => controller.togglePower(),
+                    isRunning: isRunning,
+                    isConnected: isConnected,
+                    onTap: () {
+                      if (!isConnected) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(context.tr('disconnected')),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                        return;
+                      }
+                      controller.togglePower();
+                    },
                   ),
                 ],
               ),
@@ -169,13 +202,6 @@ class CircularModeDial extends StatelessWidget {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    // 6 modes placed at angles:
-    // Rejuvenating: -90° (top)
-    // Firming: -30° (top-right)
-    // Lifting: +30° (bottom-right)
-    // IntensiveCare: +90° (bottom)
-    // Revitalizing: +150° (bottom-left)
-    // Plumping: +210° (top-left)
     final double angleInDegrees = switch (mode) {
       MaskModeType.rejuvenating => -90.0,
       MaskModeType.firming => -30.0,
@@ -185,7 +211,7 @@ class CircularModeDial extends StatelessWidget {
       MaskModeType.plumping => 210.0,
     };
 
-    final double radius = 105.0; // Distance from center
+    const double radius = 105.0; // Distance from center
     final double angleInRadians = angleInDegrees * (math.pi / 180.0);
     final double x = radius * math.cos(angleInRadians);
     final double y = radius * math.sin(angleInRadians);
@@ -231,9 +257,10 @@ class CircularModeDial extends StatelessWidget {
     );
   }
 
-  Widget _buildCenterPowerButton({
+  Widget _buildCenterActionButton({
     required BuildContext context,
-    required bool isPowerOn,
+    required bool isRunning,
+    required bool isConnected,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -245,9 +272,9 @@ class CircularModeDial extends StatelessWidget {
         height: 100,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: isPowerOn ? AppColors.primaryGradient : AppColors.inactiveGradient,
+          gradient: isRunning ? AppColors.primaryGradient : AppColors.inactiveGradient,
           boxShadow: [
-            if (isPowerOn)
+            if (isRunning)
               BoxShadow(
                 color: AppColors.primary.withValues(alpha: 0.4),
                 blurRadius: 20,
@@ -265,14 +292,14 @@ class CircularModeDial extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.power_settings_new_rounded,
-              size: 30,
+            Icon(
+              isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              size: 34,
               color: Colors.white,
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
-              isPowerOn ? context.tr('start') : context.tr('stop'),
+              isRunning ? context.tr('pause') : context.tr('start'),
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

@@ -12,8 +12,20 @@ class SkinMetricBars extends StatelessWidget {
     final controller = context.watch<MaskController>();
     final metrics = controller.skinMetrics;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -53,7 +65,7 @@ class SkinMetricBars extends StatelessWidget {
         // Vertical Progress Capsule Bar
         Container(
           width: 16,
-          height: 72,
+          height: 64,
           decoration: BoxDecoration(
             color: const Color(0xFFF2EFE9),
             borderRadius: BorderRadius.circular(8),
@@ -77,7 +89,7 @@ class SkinMetricBars extends StatelessWidget {
 
         // Metric Label
         SizedBox(
-          width: 78,
+          width: 76,
           child: Text(
             label,
             textAlign: TextAlign.center,

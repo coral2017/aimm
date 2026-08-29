@@ -21,6 +21,8 @@ class CombinationModeDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<MaskController>();
 
+    const allModes = MaskModeType.values;
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -45,7 +47,7 @@ class CombinationModeDialog extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          // Title
+          // Title & Close
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -64,7 +66,7 @@ class CombinationModeDialog extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           Text(
             context.tr('combinationModeDesc'),
@@ -75,78 +77,92 @@ class CombinationModeDialog extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // Combination Sequence Pipeline
+          // Combination 6-Stage Pipeline List
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.capsuleBackground,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
-              children: [
-                _buildStageRow(
-                  stageNum: '1',
-                  modeName: context.tr('rejuvenating'),
-                  duration: '4 min',
-                  gear: '03',
-                  icon: Icons.hub_outlined,
-                ),
-                const Divider(height: 16, color: Color(0xFFE5E0D6)),
-                _buildStageRow(
-                  stageNum: '2',
-                  modeName: context.tr('firming'),
-                  duration: '4 min',
-                  gear: '05',
-                  icon: Icons.lightbulb_outline,
-                ),
-                const Divider(height: 16, color: Color(0xFFE5E0D6)),
-                _buildStageRow(
-                  stageNum: '3',
-                  modeName: context.tr('lifting'),
-                  duration: '4 min',
-                  gear: '04',
-                  icon: Icons.waves,
-                ),
-              ],
+              children: List.generate(allModes.length, (index) {
+                final mode = allModes[index];
+                return Column(
+                  children: [
+                    _buildStageRow(
+                      context: context,
+                      stageNum: '${index + 1}',
+                      modeName: context.tr(mode.l10nKey),
+                      duration: '2 min',
+                      icon: mode.icon,
+                    ),
+                    if (index < allModes.length - 1)
+                      const Divider(height: 12, color: Color(0xFFE5E0D6)),
+                  ],
+                );
+              }),
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Start Combination Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                controller.setMode(MaskModeType.rejuvenating);
-                controller.setGear(3);
-                if (!controller.isPowerOn) {
-                  controller.togglePower();
-                }
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(context.tr('start') + ': ' + context.tr('combination')),
-                    backgroundColor: AppColors.primary,
-                    duration: const Duration(seconds: 2),
+          // Action Buttons: [Random Routine] [Standard Routine]
+          Row(
+            children: [
+              // Random Routine
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    controller.startCombinationMode(isRandom: true);
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${context.tr('start')}: ${context.tr('randomCycle')} (12:00)'),
+                        backgroundColor: AppColors.primary,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.shuffle_rounded, size: 18),
+                  label: Text(context.tr('randomCycle')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: Color(0xFFE5E0D6), width: 1.2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: Text(
-                context.tr('start'),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+
+              const SizedBox(width: 12),
+
+              // Sequential Routine
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    controller.startCombinationMode(isRandom: false);
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${context.tr('start')}: ${context.tr('sequenceCycle')} (12:00)'),
+                        backgroundColor: AppColors.primary,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                  label: Text(context.tr('sequenceCycle')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -154,53 +170,56 @@ class CombinationModeDialog extends StatelessWidget {
   }
 
   Widget _buildStageRow({
+    required BuildContext context,
     required String stageNum,
     required String modeName,
     required String duration,
-    required String gear,
     required IconData icon,
   }) {
-    return Row(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: const BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              stageNum,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          alignment: Alignment.center,
-          child: Text(
-            stageNum,
+          const SizedBox(width: 10),
+          Icon(icon, size: 18, color: AppColors.textPrimary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              modeName,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          Text(
+            duration,
             style: const TextStyle(
-              color: Colors.white,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Icon(icon, size: 20, color: AppColors.textPrimary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            modeName,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
-        Text(
-          '$duration | Level $gear',
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

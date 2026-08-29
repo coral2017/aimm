@@ -25,7 +25,7 @@ class SavedModesPage extends StatelessWidget {
         ),
       ),
       body: presets.isEmpty
-          ? Center(
+          ? const Center(
               child: Text(
                 'No saved presets yet.',
                 style: TextStyle(color: AppColors.textSecondary),

@@ -47,12 +47,22 @@ class BleRealService implements IBleService {
     // Cancel existing scan subscription
     _scanSub?.cancel();
     _scanSub = FlutterBluePlus.scanResults.listen((results) {
-      final devices = results.map((r) {
+      final maskDevices = results.where((r) {
+        final advName = r.advertisementData.advName.trim().toUpperCase();
+        final platName = r.device.platformName.trim().toUpperCase();
+        final hasMaskName = advName.contains('AIMO') ||
+            advName.contains('MASK') ||
+            platName.contains('AIMO') ||
+            platName.contains('MASK');
+        final hasService = r.advertisementData.serviceUuids
+            .any((u) => u.toString().toUpperCase().contains('F760'));
+        return hasMaskName || hasService;
+      }).map((r) {
         final advName = r.advertisementData.advName.trim();
         final platName = r.device.platformName.trim();
         final name = advName.isNotEmpty
             ? advName
-            : (platName.isNotEmpty ? platName : 'Unknown Device (${r.device.remoteId.str.substring(0, 4)}...)');
+            : (platName.isNotEmpty ? platName : 'AIMO Mask');
 
         return BleDeviceInfo(
           id: r.device.remoteId.str,
@@ -61,16 +71,10 @@ class BleRealService implements IBleService {
         );
       }).toList();
 
-      // Sort: Prioritize AIMO or Mask devices first, then by RSSI signal strength
-      devices.sort((a, b) {
-        final aIsAimo = a.name.toUpperCase().contains('AIMO') || a.name.toUpperCase().contains('MASK');
-        final bIsAimo = b.name.toUpperCase().contains('AIMO') || b.name.toUpperCase().contains('MASK');
-        if (aIsAimo && !bIsAimo) return -1;
-        if (!aIsAimo && bIsAimo) return 1;
-        return b.rssi.compareTo(a.rssi);
-      });
+      // Sort by RSSI signal strength
+      maskDevices.sort((a, b) => b.rssi.compareTo(a.rssi));
 
-      _scanResultsController.add(devices);
+      _scanResultsController.add(maskDevices);
     });
 
     try {

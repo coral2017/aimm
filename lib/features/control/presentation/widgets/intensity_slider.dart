@@ -6,16 +6,19 @@ import '../../providers/mask_controller.dart';
 
 class IntensitySlider extends StatelessWidget {
   final Function(int targetGear) onHighIntensityRequested;
+  final VoidCallback onBlockedTap;
 
   const IntensitySlider({
     super.key,
     required this.onHighIntensityRequested,
+    required this.onBlockedTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<MaskController>();
     final isConnected = controller.isConnected;
+    final isRunning = controller.isRunning;
     final currentGear = controller.currentGear;
 
     final String gearDisplay = isConnected ? currentGear.toString().padLeft(2, '0') : '--';
@@ -68,8 +71,12 @@ class IntensitySlider extends StatelessWidget {
               // Minus Button
               _buildStepButton(
                 icon: Icons.remove_rounded,
-                isEnabled: isConnected && currentGear > 1,
+                isEnabled: isConnected,
                 onTap: () {
+                  if (!isRunning) {
+                    onBlockedTap();
+                    return;
+                  }
                   if (currentGear > 1) {
                     controller.setGear(currentGear - 1);
                   }
@@ -82,9 +89,9 @@ class IntensitySlider extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10.0),
                   child: SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: isConnected ? AppColors.primary : AppColors.textMuted,
+                      activeTrackColor: isRunning ? AppColors.primary : AppColors.textMuted,
                       inactiveTrackColor: const Color(0xFFEFECE6),
-                      thumbColor: isConnected ? AppColors.primary : AppColors.textMuted,
+                      thumbColor: isRunning ? AppColors.primary : AppColors.textMuted,
                       trackHeight: 6.0,
                       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.0),
                       overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
@@ -96,6 +103,10 @@ class IntensitySlider extends StatelessWidget {
                       divisions: 15,
                       onChanged: isConnected
                           ? (value) {
+                              if (!isRunning) {
+                                onBlockedTap();
+                                return;
+                              }
                               final newGear = value.round();
                               if (newGear > 10 && !controller.hasAcknowledgedHighIntensity) {
                                 onHighIntensityRequested(newGear);
@@ -112,8 +123,12 @@ class IntensitySlider extends StatelessWidget {
               // Plus Button
               _buildStepButton(
                 icon: Icons.add_rounded,
-                isEnabled: isConnected && currentGear < 16,
+                isEnabled: isConnected,
                 onTap: () {
+                  if (!isRunning) {
+                    onBlockedTap();
+                    return;
+                  }
                   if (currentGear < 16) {
                     final nextGear = currentGear + 1;
                     if (nextGear > 10 && !controller.hasAcknowledgedHighIntensity) {

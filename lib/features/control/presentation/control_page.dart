@@ -107,6 +107,18 @@ class ControlPage extends StatelessWidget {
 
               // Intensity Level Slider Card
               IntensitySlider(
+                onBlockedTap: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.tr('mustStartBeforeAdjust')),
+                      backgroundColor: AppColors.primary,
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+                },
                 onHighIntensityRequested: (targetGear) async {
                   final confirmed = await HighIntensityDialog.show(context);
                   if (confirmed == true && context.mounted) {

@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/core/ble/ble_protocol.dart';
-import '../lib/features/control/models/mask_mode.dart';
+import 'package:aimm/core/ble/ble_protocol.dart';
+import 'package:aimm/features/control/models/mask_mode.dart';
 
 void main() {
   group('BleProtocol Tests', () {
