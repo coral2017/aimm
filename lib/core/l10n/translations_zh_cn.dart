@@ -7,6 +7,7 @@ const Map<String, String> translationsZhCn = {
   'connectingDevice': '正在连接主机',
   'cancelConnection': '取消连接',
   'connect': '连接',
+  'bind': '绑定设备',
   'disconnect': '断开连接',
   'noDevicesFound': '主机如没开机，请先按开关键打开主机（蓝灯闪烁）。',
   'rescan': '重新扫描',

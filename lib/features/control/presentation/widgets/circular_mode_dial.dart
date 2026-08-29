@@ -5,6 +5,7 @@ import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/mask_mode.dart';
 import '../../providers/mask_controller.dart';
+import 'beauty_hub_icons.dart';
 
 class CircularModeDial extends StatelessWidget {
   final VoidCallback onSaveTap;
@@ -24,11 +25,11 @@ class CircularModeDial extends StatelessWidget {
     final isRunning = controller.isRunning;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
             color: AppColors.shadow,
@@ -72,17 +73,17 @@ class CircularModeDial extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
-          // Center Circular Mode Selector
+          // Central Circular Mode Selector (Figma 0:810 / 18:591)
           Center(
             child: SizedBox(
-              width: 270,
-              height: 270,
+              width: 260,
+              height: 260,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Outer Faint Ring
+                  // Outer Faint Ring (Figma 0:863)
                   Container(
                     width: 210,
                     height: 210,
@@ -95,7 +96,7 @@ class CircularModeDial extends StatelessWidget {
                     ),
                   ),
 
-                  // 6 Mode Nodes positioned around circle
+                  // 6 Mode Nodes positioned around orbit ring
                   ...MaskModeType.values.map((mode) {
                     return _buildModeNode(
                       context: context,
@@ -128,25 +129,25 @@ class CircularModeDial extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
 
-          // Bottom Action Row (Save & Combination)
+          // Bottom Action Row (save & Combination)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Save Button
+              // Save Button (Figma 0:849)
               InkWell(
                 onTap: onSaveTap,
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        Icons.bookmark_border_rounded,
+                        Icons.bookmark_outline_rounded,
                         size: 16,
-                        color: AppColors.textSecondary,
+                        color: AppColors.textPrimary,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -154,7 +155,7 @@ class CircularModeDial extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ],
@@ -162,19 +163,19 @@ class CircularModeDial extends StatelessWidget {
                 ),
               ),
 
-              // Combination Button
+              // Combination Button (Figma 0:830)
               InkWell(
                 onTap: onCombinationTap,
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
                         Icons.layers_outlined,
                         size: 16,
-                        color: AppColors.textSecondary,
+                        color: AppColors.textPrimary,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -182,7 +183,7 @@ class CircularModeDial extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ],
@@ -202,19 +203,22 @@ class CircularModeDial extends StatelessWidget {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    // Exact Figma angles for all 6 modes
     final double angleInDegrees = switch (mode) {
-      MaskModeType.rejuvenating => -90.0,
-      MaskModeType.firming => -30.0,
-      MaskModeType.lifting => 30.0,
-      MaskModeType.intensiveCare => 90.0,
-      MaskModeType.revitalizing => 150.0,
-      MaskModeType.plumping => 210.0,
+      MaskModeType.rejuvenating => -90.0, // Top
+      MaskModeType.firming => -30.0, // Top Right
+      MaskModeType.lifting => 30.0, // Bottom Right
+      MaskModeType.intensiveCare => 90.0, // Bottom
+      MaskModeType.revitalizing => 150.0, // Bottom Left
+      MaskModeType.plumping => 210.0, // Top Left
     };
 
-    const double radius = 105.0; // Distance from center
+    const double radius = 100.0;
     final double angleInRadians = angleInDegrees * (math.pi / 180.0);
     final double x = radius * math.cos(angleInRadians);
     final double y = radius * math.sin(angleInRadians);
+
+    final nodeColor = isSelected ? AppColors.primary : AppColors.textPrimary;
 
     return Transform.translate(
       offset: Offset(x, y),
@@ -229,15 +233,15 @@ class CircularModeDial extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(5),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    mode.icon,
-                    size: 22,
-                    color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                  child: BeautyHubIcon(
+                    modeId: mode.id,
+                    color: nodeColor,
+                    size: 24,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -246,7 +250,7 @@ class CircularModeDial extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                    color: nodeColor,
                   ),
                 ),
               ],
@@ -268,8 +272,8 @@ class CircularModeDial extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
-        width: 100,
-        height: 100,
+        width: 98,
+        height: 98,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: isRunning ? AppColors.primaryGradient : AppColors.inactiveGradient,
@@ -294,7 +298,7 @@ class CircularModeDial extends StatelessWidget {
           children: [
             Icon(
               isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              size: 34,
+              size: 32,
               color: Colors.white,
             ),
             const SizedBox(height: 2),

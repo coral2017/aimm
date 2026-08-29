@@ -7,6 +7,7 @@ const Map<String, String> translationsZhTw = {
   'connectingDevice': '正在連接主機',
   'cancelConnection': '取消連接',
   'connect': '連接',
+  'bind': '綁定設備',
   'disconnect': '斷開連接',
   'noDevicesFound': '主機如沒開機，請先按開關鍵打開主機（藍燈閃爍）。',
   'rescan': '重新掃描',

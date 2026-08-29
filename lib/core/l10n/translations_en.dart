@@ -7,6 +7,7 @@ const Map<String, String> translationsEn = {
   'connectingDevice': 'Connecting to device...',
   'cancelConnection': 'Cancel',
   'connect': 'Connect',
+  'bind': 'bind',
   'disconnect': 'Disconnect',
   'noDevicesFound': 'If host is off, press power button to turn on (blue light flashing).',
   'rescan': 'Scan Again',
