@@ -12,8 +12,6 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<MaskController>();
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -79,39 +77,39 @@ class ProfilePage extends StatelessWidget {
                   },
                 ),
 
-                _buildMenuItem(
-                  context: context,
-                  icon: Icons.logout_rounded,
-                  title: context.tr('logout'),
-                  isDestructive: true,
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        title: Text(context.tr('logout')),
-                        content: const Text('Are you sure you want to log out?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: Text(context.tr('cancel')),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              controller.disconnect();
-                              Navigator.of(ctx).pop();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: Text(context.tr('confirm')),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                // _buildMenuItem(
+                //   context: context,
+                //   icon: Icons.logout_rounded,
+                //   title: context.tr('logout'),
+                //   isDestructive: true,
+                //   onTap: () {
+                //     showDialog(
+                //       context: context,
+                //       builder: (ctx) => AlertDialog(
+                //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                //         title: Text(context.tr('logout')),
+                //         content: const Text('Are you sure you want to log out?'),
+                //         actions: [
+                //           TextButton(
+                //             onPressed: () => Navigator.of(ctx).pop(),
+                //             child: Text(context.tr('cancel')),
+                //           ),
+                //           ElevatedButton(
+                //             onPressed: () {
+                //               controller.disconnect();
+                //               Navigator.of(ctx).pop();
+                //             },
+                //             style: ElevatedButton.styleFrom(
+                //               backgroundColor: AppColors.primary,
+                //               foregroundColor: Colors.white,
+                //             ),
+                //             child: Text(context.tr('confirm')),
+                //           ),
+                //         ],
+                //       ),
+                //     );
+                //   },
+                // ),
 
                 const SizedBox(height: 30),
               ],
@@ -182,22 +180,22 @@ class ProfilePage extends StatelessWidget {
                     letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    context.tr('premiumMember'),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryDark,
-                    ),
-                  ),
-                ),
+                // const SizedBox(height: 4),
+                // Container(
+                //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                //   decoration: BoxDecoration(
+                //     color: AppColors.primary.withValues(alpha: 0.12),
+                //     borderRadius: BorderRadius.circular(6),
+                //   ),
+                //   child: Text(
+                //     context.tr('premiumMember'),
+                //     style: const TextStyle(
+                //       fontSize: 11,
+                //       fontWeight: FontWeight.w600,
+                //       color: AppColors.primaryDark,
+                //     ),
+                //   ),
+                // ),
                 const SizedBox(height: 6),
                 Text(
                   context.tr('deviceModel'),
