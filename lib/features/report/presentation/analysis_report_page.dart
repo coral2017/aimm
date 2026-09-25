@@ -106,9 +106,9 @@ class AnalysisReportPage extends StatelessWidget {
                           icon: Icons.hub_outlined,
                           title: context.tr('youthfulness'),
                           description: context.tr('reportYouthfulnessDesc'),
-                          tag1Label: context.tr('brighteningEffect'),
+                          tag1Label: context.tr('firmness'),
                           tag1Score: 82,
-                          tag2Label: context.tr('evenSkinTone'),
+                          tag2Label: context.tr('skinElasticity'),
                           tag2Score: 84,
                         ),
 

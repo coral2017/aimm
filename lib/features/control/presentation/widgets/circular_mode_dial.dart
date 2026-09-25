@@ -47,9 +47,9 @@ class CircularModeDial extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Beauty Hub',
-                  style: TextStyle(
+                Text(
+                  context.tr('treatmentArea'),
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,

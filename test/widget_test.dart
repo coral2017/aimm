@@ -6,7 +6,7 @@ void main() {
     await tester.pumpWidget(const SmartMaskApp());
     await tester.pumpAndSettle();
 
-    // Verify Control Tab and Beauty Hub are rendered
-    expect(find.text('Beauty Hub'), findsOneWidget);
+    // Verify Control Tab and Treatment Area are rendered
+    expect(find.text('Treatment Area'), findsOneWidget);
   });
 }
