@@ -53,7 +53,7 @@ class AppLocalizations {
       if (locale.countryCode == 'TW' || locale.countryCode == 'HK' || locale.scriptCode == 'Hant') {
         return '繁';
       }
-      return '中';
+      return '简';
     }
     return 'EN';
   }

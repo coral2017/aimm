@@ -64,8 +64,8 @@ class SkinMetricBars extends StatelessWidget {
       children: [
         // Vertical Progress Capsule Bar
         Container(
-          width: 16,
-          height: 64,
+          width: 18,
+          height: 80,
           decoration: BoxDecoration(
             color: const Color(0xFFF2EFE9),
             borderRadius: BorderRadius.circular(8),
@@ -85,7 +85,7 @@ class SkinMetricBars extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
 
         // Metric Label
         SizedBox(
@@ -96,7 +96,7 @@ class SkinMetricBars extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
             ),

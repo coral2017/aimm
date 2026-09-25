@@ -137,37 +137,8 @@ class StatusMetricCard extends StatelessWidget {
                   ),
                 ),
 
-              // Right: Language Pill (🌐 EN / 简体)
-              InkWell(
-                onTap: () => controller.cycleLanguage(),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.capsuleBackground,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.language_rounded,
-                        size: 15,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        context.loc.currentLanguageLabel,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Right: Language Pill Dropdown (🌐 EN / 简 / 繁)
+              _buildLanguageDropdown(context, controller),
             ],
           ),
 
@@ -214,8 +185,8 @@ class StatusMetricCard extends StatelessWidget {
       children: [
         // Vertical Progress Capsule Bar
         Container(
-          width: 16,
-          height: 64,
+          width: 18,
+          height: 80,
           decoration: BoxDecoration(
             color: const Color(0xFFF2EFE9),
             borderRadius: BorderRadius.circular(8),
@@ -235,7 +206,7 @@ class StatusMetricCard extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
 
         // Metric Label
         SizedBox(
@@ -246,13 +217,115 @@ class StatusMetricCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLanguageDropdown(BuildContext context, MaskController controller) {
+    final currentLoc = controller.currentLocale;
+    final isEn = currentLoc.languageCode == 'en';
+    final isCn = currentLoc.languageCode == 'zh' &&
+        (currentLoc.countryCode == 'CN' || currentLoc.countryCode == null);
+    final isTw = currentLoc.languageCode == 'zh' &&
+        (currentLoc.countryCode == 'TW' ||
+            currentLoc.countryCode == 'HK' ||
+            currentLoc.scriptCode == 'Hant');
+
+    return Theme(
+      data: Theme.of(context).copyWith(
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+      ),
+      child: PopupMenuButton<Locale>(
+        tooltip: '',
+        offset: const Offset(0, 30),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        color: Colors.white,
+        elevation: 8,
+        shadowColor: AppColors.shadow.withValues(alpha: 0.15),
+        onSelected: (locale) => controller.setLocale(locale),
+        itemBuilder: (ctx) => [
+          _buildLanguageMenuItem(
+            locale: const Locale('en'),
+            label: 'English',
+            isSelected: isEn,
+          ),
+          _buildLanguageMenuItem(
+            locale: const Locale('zh', 'CN'),
+            label: '简体中文',
+            isSelected: isCn,
+          ),
+          _buildLanguageMenuItem(
+            locale: const Locale('zh', 'TW'),
+            label: '繁體中文',
+            isSelected: isTw,
+          ),
+        ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: AppColors.capsuleBackground,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.language_rounded,
+                size: 15,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                context.loc.currentLanguageLabel,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<Locale> _buildLanguageMenuItem({
+    required Locale locale,
+    required String label,
+    required bool isSelected,
+  }) {
+    return PopupMenuItem<Locale>(
+      value: locale,
+      height: 40,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              color: isSelected ? AppColors.primary : AppColors.textPrimary,
+            ),
+          ),
+          if (isSelected)
+            const Icon(
+              Icons.check_rounded,
+              size: 16,
+              color: AppColors.primary,
+            ),
+        ],
+      ),
     );
   }
 }

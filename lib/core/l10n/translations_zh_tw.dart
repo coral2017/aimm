@@ -25,7 +25,7 @@ const Map<String, String> translationsZhTw = {
   'intensiveCare': '密集修護',
   'revitalizing': '賦活',
   'plumping': '增加彈性',
-  'save': 'save',
+  'save': '儲存',
   'saveMode': '保存當前模式',
   'savedModes': '保存的模式',
   'combination': '綜合模式',
