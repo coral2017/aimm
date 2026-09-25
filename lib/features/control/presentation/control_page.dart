@@ -161,7 +161,6 @@ class _ControlPageState extends State<ControlPage> {
                 onHighIntensityRequested: (targetGear) async {
                   final confirmed = await HighIntensityDialog.show(context);
                   if (confirmed == true && context.mounted) {
-                    context.read<MaskController>().acknowledgeHighIntensity();
                     context.read<MaskController>().setGear(targetGear);
                   }
                 },

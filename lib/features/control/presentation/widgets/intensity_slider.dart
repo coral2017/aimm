@@ -108,7 +108,7 @@ class IntensitySlider extends StatelessWidget {
                                 return;
                               }
                               final newGear = value.round();
-                              if (newGear > 10 && !controller.hasAcknowledgedHighIntensity) {
+                              if (newGear > currentGear && newGear >= 10) {
                                 onHighIntensityRequested(newGear);
                               } else {
                                 controller.setGear(newGear);
@@ -131,7 +131,7 @@ class IntensitySlider extends StatelessWidget {
                   }
                   if (currentGear < 16) {
                     final nextGear = currentGear + 1;
-                    if (nextGear > 10 && !controller.hasAcknowledgedHighIntensity) {
+                    if (nextGear >= 10) {
                       onHighIntensityRequested(nextGear);
                     } else {
                       controller.setGear(nextGear);
