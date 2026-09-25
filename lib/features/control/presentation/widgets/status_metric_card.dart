@@ -83,11 +83,14 @@ class StatusMetricCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Battery
-                        const Icon(
-                          Icons.battery_charging_full_rounded,
-                          size: 15,
-                          color: AppColors.textPrimary,
+                        // Battery (horizontal per Figma 0:810)
+                        const RotatedBox(
+                          quarterTurns: 1,
+                          child: Icon(
+                            Icons.battery_full_rounded,
+                            size: 15,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -306,7 +309,7 @@ class StatusMetricCard extends StatelessWidget {
   }) {
     return PopupMenuItem<Locale>(
       value: locale,
-      height: 40,
+      height: 30,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

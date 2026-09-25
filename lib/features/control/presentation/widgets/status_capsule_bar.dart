@@ -61,10 +61,13 @@ class StatusCapsuleBar extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          isConnected ? Icons.battery_charging_full_rounded : Icons.battery_unknown_rounded,
-                          size: 16,
-                          color: isConnected ? AppColors.textPrimary : AppColors.textMuted,
+                        RotatedBox(
+                          quarterTurns: 1,
+                          child: Icon(
+                            isConnected ? Icons.battery_full_rounded : Icons.battery_unknown_rounded,
+                            size: 16,
+                            color: isConnected ? AppColors.textPrimary : AppColors.textMuted,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         Text(

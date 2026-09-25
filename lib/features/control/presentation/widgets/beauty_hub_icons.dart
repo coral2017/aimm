@@ -40,10 +40,6 @@ class _BeautyHubIconPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    final fillPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
     final cx = size.width / 2;
     final cy = size.height / 2;
     final w = size.width;
@@ -101,18 +97,47 @@ class _BeautyHubIconPainter extends CustomPainter {
         canvas.drawPath(path, paint);
         break;
 
-      // 4: Revitalizing (舒缓修护) - Cute smiling face
+      // 4: Revitalizing (舒缓修护) - Cute smiling face with two hands (Figma 18:692)
       case 4:
-        // Outer face circle
-        canvas.drawCircle(Offset(cx, cy), w * 0.4, paint);
-        // Eyes
-        canvas.drawCircle(Offset(cx - w * 0.15, cy - h * 0.1), 1.6, fillPaint);
-        canvas.drawCircle(Offset(cx + w * 0.15, cy - h * 0.1), 1.6, fillPaint);
-        // Smile curve
+        final faceCenter = Offset(cx, cy - h * 0.06);
+        final faceRadius = w * 0.38;
+
+        // Head outer circle arc (leaving gap at bottom for hands)
+        canvas.drawArc(
+          Rect.fromCircle(center: faceCenter, radius: faceRadius),
+          math.pi * 0.18,
+          math.pi * 1.64,
+          false,
+          paint,
+        );
+
+        // Eyes (two cute smiling arches ^ ^)
+        final leftEye = Path();
+        leftEye.moveTo(cx - w * 0.20, cy - h * 0.09);
+        leftEye.quadraticBezierTo(cx - w * 0.13, cy - h * 0.20, cx - w * 0.06, cy - h * 0.09);
+        canvas.drawPath(leftEye, paint);
+
+        final rightEye = Path();
+        rightEye.moveTo(cx + w * 0.06, cy - h * 0.09);
+        rightEye.quadraticBezierTo(cx + w * 0.13, cy - h * 0.20, cx + w * 0.20, cy - h * 0.09);
+        canvas.drawPath(rightEye, paint);
+
+        // Smile mouth curve
         final smilePath = Path();
-        smilePath.moveTo(cx - w * 0.18, cy + h * 0.1);
-        smilePath.quadraticBezierTo(cx, cy + h * 0.28, cx + w * 0.18, cy + h * 0.1);
+        smilePath.moveTo(cx - w * 0.14, cy + h * 0.06);
+        smilePath.quadraticBezierTo(cx, cy + h * 0.19, cx + w * 0.14, cy + h * 0.06);
         canvas.drawPath(smilePath, paint);
+
+        // Two little cute round hands resting on cheeks/chin
+        final handRadius = w * 0.09;
+        canvas.drawCircle(Offset(cx - w * 0.27, cy + h * 0.27), handRadius, paint);
+        canvas.drawCircle(Offset(cx + w * 0.27, cy + h * 0.27), handRadius, paint);
+
+        // Bottom chin curve between hands
+        final chinPath = Path();
+        chinPath.moveTo(cx - w * 0.14, cy + h * 0.26);
+        chinPath.quadraticBezierTo(cx, cy + h * 0.32, cx + w * 0.14, cy + h * 0.26);
+        canvas.drawPath(chinPath, paint);
         break;
 
       // 5: Plumping (水光盈润) - Mirror / droplet with stem
