@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../models/skin_metric_model.dart';
 import '../../providers/mask_controller.dart';
+import 'skin_water_bar.dart';
 
 class SkinMetricBars extends StatelessWidget {
   const SkinMetricBars({super.key});
@@ -29,80 +31,48 @@ class SkinMetricBars extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildMetricItem(
+          SkinWaterBar(
             label: context.tr('smoothness'),
-            value: metrics.smoothness,
-            isConnected: controller.isConnected,
+            progress: metrics.smoothness,
+            isHighlighted: SkinMetricConfig.isHighlighted(
+              mode: controller.currentMode,
+              metric: SkinMetricType.delicacy,
+              isCombination: controller.isCombinationActive,
+            ),
+            isAnimating: controller.isRunning,
           ),
-          _buildMetricItem(
+          SkinWaterBar(
             label: context.tr('hydration'),
-            value: metrics.hydration,
-            isConnected: controller.isConnected,
+            progress: metrics.hydration,
+            isHighlighted: SkinMetricConfig.isHighlighted(
+              mode: controller.currentMode,
+              metric: SkinMetricType.hydration,
+              isCombination: controller.isCombinationActive,
+            ),
+            isAnimating: controller.isRunning,
           ),
-          _buildMetricItem(
+          SkinWaterBar(
             label: context.tr('youthfulness'),
-            value: metrics.youthfulness,
-            isConnected: controller.isConnected,
+            progress: metrics.youthfulness,
+            isHighlighted: SkinMetricConfig.isHighlighted(
+              mode: controller.currentMode,
+              metric: SkinMetricType.youthfulness,
+              isCombination: controller.isCombinationActive,
+            ),
+            isAnimating: controller.isRunning,
           ),
-          _buildMetricItem(
+          SkinWaterBar(
             label: context.tr('skinTone'),
-            value: metrics.skinTone,
-            isConnected: controller.isConnected,
+            progress: metrics.skinTone,
+            isHighlighted: SkinMetricConfig.isHighlighted(
+              mode: controller.currentMode,
+              metric: SkinMetricType.clarity,
+              isCombination: controller.isCombinationActive,
+            ),
+            isAnimating: controller.isRunning,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMetricItem({
-    required String label,
-    required double value,
-    required bool isConnected,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Vertical Progress Capsule Bar
-        Container(
-          width: 18,
-          height: 80,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF2EFE9),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.bottomCenter,
-          child: AnimatedFractionallySizedBox(
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOutCubic,
-            widthFactor: 1.0,
-            heightFactor: isConnected ? value.clamp(0.0, 1.0) : 0.0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: isConnected ? AppColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 4),
-
-        // Metric Label
-        SizedBox(
-          width: 76,
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

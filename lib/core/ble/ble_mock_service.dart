@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import '../storage/device_storage_service.dart';
 import 'ble_device_info.dart';
 import 'ble_protocol.dart';
 import 'ble_service_interface.dart';
@@ -47,7 +48,10 @@ class BleMockService implements IBleService {
   Future<void> startScan({Duration timeout = const Duration(seconds: 4)}) async {
     _setConnectionState(BleConnectionState.scanning);
 
-    final mockDevices = [
+    final boundDevice = await DeviceStorageService.instance.getBoundDevice();
+
+    final mockDevices = <BleDeviceInfo>[
+      if (boundDevice != null) boundDevice,
       const BleDeviceInfo(
         id: 'EF0A92E5-A99C-EC12-BADF-9E7ADE45FC29',
         name: 'AIMO Mask V2',
@@ -60,10 +64,19 @@ class BleMockService implements IBleService {
       ),
     ];
 
+    // Check if scan was cancelled while fetching bound device
+    if (_connectionState != BleConnectionState.scanning) {
+      return;
+    }
+
+    // Deduplicate by ID
+    final seen = <String>{};
+    final uniqueDevices = mockDevices.where((d) => seen.add(d.id)).toList();
+
     // Simulate discovering devices after 800ms
     _scanTimer?.cancel();
     _scanTimer = Timer(const Duration(milliseconds: 800), () {
-      _scanResultsController.add(mockDevices);
+      _scanResultsController.add(uniqueDevices);
     });
 
     Timer(timeout, () {

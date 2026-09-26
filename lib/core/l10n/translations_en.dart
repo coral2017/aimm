@@ -1,5 +1,5 @@
 const Map<String, String> translationsEn = {
-  'appTitle': 'AI Smart Beauty',
+  'appTitle': 'Smart Skin Sensor',
   'treatmentArea': 'Treatment Area',
   'analysisReport': 'Analysis Report',
   'connected': 'Connected',
@@ -80,4 +80,10 @@ const Map<String, String> translationsEn = {
   'timeRemaining': 'Time Remaining',
   'min': 'min',
   'sec': 'sec',
+  'reconnecting': 'Reconnecting...',
+  'offline': 'Offline',
+  'retryConnect': 'Reconnect Now',
+  'deviceUnbound': 'Device unbound',
+  'unbindConfirmTitle': 'Unbind Device',
+  'unbindConfirmDesc': 'Are you sure you want to unbind this device? Auto-reconnection will be stopped.',
 };

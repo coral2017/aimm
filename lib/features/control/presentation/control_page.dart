@@ -19,12 +19,13 @@ class ControlPage extends StatefulWidget {
   State<ControlPage> createState() => _ControlPageState();
 }
 
-class _ControlPageState extends State<ControlPage> {
+class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
   StreamSubscription? _alertSub;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final controller = context.read<MaskController>();
       _alertSub = controller.globalAlertStream.listen((alertKey) {
@@ -57,7 +58,15 @@ class _ControlPageState extends State<ControlPage> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<MaskController>().onAppResumed();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _alertSub?.cancel();
     super.dispose();
   }

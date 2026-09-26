@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../core/ble/ble_device_info.dart';
 import '../../../core/ble/ble_manager.dart';
 import '../../../core/ble/ble_service_interface.dart';
+import '../../../core/storage/device_storage_service.dart';
 import '../models/mask_mode.dart';
 
 class SavedModePreset {
@@ -36,6 +37,11 @@ class MaskController extends ChangeNotifier {
 
   BleConnectionState _connectionState = BleConnectionState.disconnected;
   BleDeviceInfo? _activeDevice;
+  BleDeviceInfo? _boundDevice;
+  bool _isAutoReconnecting = false;
+  Timer? _autoReconnectTimer;
+  int _autoReconnectAttemptCount = 0;
+  StreamSubscription? _scanResultsSub;
 
   MaskModeType _currentMode = MaskModeType.rejuvenating;
   int _currentGear = 1; // Default initial gear is 1
@@ -46,7 +52,7 @@ class MaskController extends ChangeNotifier {
   static const int totalTreatmentSeconds = 12 * 60;
   int _remainingSecondsTotal = totalTreatmentSeconds;
 
-  final SkinMetricData _skinMetrics = const SkinMetricData();
+  SkinMetricData _skinMetrics = SkinMetricData.empty;
   Locale _currentLocale = const Locale('en');
   bool _hasAcknowledgedHighIntensity = false;
 
@@ -75,12 +81,16 @@ class MaskController extends ChangeNotifier {
   MaskController() {
     _initBleListeners();
     _startHeartbeatWatchdog();
+    _loadBoundDeviceAndAutoConnect();
   }
 
   // Getters
   BleConnectionState get connectionState => _connectionState;
   bool get isConnected => _connectionState == BleConnectionState.connected;
   BleDeviceInfo? get activeDevice => _activeDevice;
+  BleDeviceInfo? get boundDevice => _boundDevice;
+  bool get isBound => _boundDevice != null;
+  bool get isAutoReconnecting => _isAutoReconnecting;
   MaskModeType get currentMode => _currentMode;
   int get currentGear => _currentGear;
   bool get isPowerOn => _isPowerOn;
@@ -116,6 +126,7 @@ class MaskController extends ChangeNotifier {
       _activeDevice = _bleManager.connectedDevice;
 
       if (state == BleConnectionState.connected) {
+        stopAutoReconnect();
         _lastHeartbeatTime = DateTime.now();
         // Reset to clean initial state on connection: Gear 1, Stopped, 12:00
         _currentGear = 1;
@@ -123,6 +134,11 @@ class MaskController extends ChangeNotifier {
         _remainingSecondsTotal = totalTreatmentSeconds;
         _isCombinationActive = false;
         _stopCountdown();
+
+        if (_activeDevice != null) {
+          _boundDevice = _activeDevice;
+          DeviceStorageService.instance.saveBoundDevice(_activeDevice!);
+        }
       } else if (state == BleConnectionState.disconnected) {
         final wasRunningOrConnected = oldState == BleConnectionState.connected;
         _isPowerOn = false;
@@ -133,8 +149,25 @@ class MaskController extends ChangeNotifier {
         if (wasRunningOrConnected) {
           _globalAlertController.add('deviceDisconnectedAlert');
         }
+
+        // If still bound (user did not explicitly unbind), trigger auto-reconnect
+        if (_boundDevice != null) {
+          triggerAutoReconnect();
+        }
       }
       notifyListeners();
+    });
+
+    _scanResultsSub = _bleManager.scanResultsStream.listen((devices) {
+      if (_isAutoReconnecting && _boundDevice != null && !isConnected) {
+        for (final device in devices) {
+          if (device.id == _boundDevice!.id) {
+            stopAutoReconnect();
+            connect(device);
+            break;
+          }
+        }
+      }
     });
 
     _statusSub = _bleManager.statusReportStream.listen((report) {
@@ -237,6 +270,9 @@ class MaskController extends ChangeNotifier {
       // Transition from Paused/Stopped -> Running
       if (_remainingSecondsTotal <= 0) {
         _remainingSecondsTotal = totalTreatmentSeconds;
+        _skinMetrics = SkinMetricData.initialBaseline;
+      } else if (_skinMetrics.isEmpty) {
+        _skinMetrics = SkinMetricData.initialBaseline;
       }
       _isPowerOn = true;
       _startCountdown();
@@ -262,9 +298,30 @@ class MaskController extends ChangeNotifier {
       if (_remainingSecondsTotal > 0) {
         _remainingSecondsTotal--;
 
+        // Calculate dynamic skin metrics filling per second (Tick = 1s)
+        final elapsedSeconds = totalTreatmentSeconds - _remainingSecondsTotal;
+        final phaseFactor = SkinMetricConfig.getPhaseFactor(elapsedSeconds);
+        final gearFactor = SkinMetricConfig.getGearFactor(_currentGear);
+        const vBase = SkinMetricConfig.vBase;
+
+        final weights = _isCombinationActive
+            ? SkinMetricConfig.combinationWeights
+            : (SkinMetricConfig.modeWeights[_currentMode] ?? SkinMetricConfig.combinationWeights);
+
+        final deltaDelicacy = vBase * (weights[SkinMetricType.delicacy] ?? 1.0) * phaseFactor * gearFactor;
+        final deltaHydration = vBase * (weights[SkinMetricType.hydration] ?? 1.0) * phaseFactor * gearFactor;
+        final deltaYouthfulness = vBase * (weights[SkinMetricType.youthfulness] ?? 1.0) * phaseFactor * gearFactor;
+        final deltaClarity = vBase * (weights[SkinMetricType.clarity] ?? 1.0) * phaseFactor * gearFactor;
+
+        _skinMetrics = _skinMetrics.copyWith(
+          smoothness: (_skinMetrics.smoothness + deltaDelicacy).clamp(0.0, 0.95),
+          hydration: (_skinMetrics.hydration + deltaHydration).clamp(0.0, 0.95),
+          youthfulness: (_skinMetrics.youthfulness + deltaYouthfulness).clamp(0.0, 0.95),
+          skinTone: (_skinMetrics.skinTone + deltaClarity).clamp(0.0, 0.95),
+        );
+
         // If in combination mode, check if we need to advance to next 2-minute stage
         if (_isCombinationActive && _combinationSequence.isNotEmpty) {
-          final elapsedSeconds = totalTreatmentSeconds - _remainingSecondsTotal;
           final targetStage = (elapsedSeconds ~/ 120).clamp(0, _combinationSequence.length - 1);
           if (targetStage != _combinationCurrentStage) {
             _combinationCurrentStage = targetStage;
@@ -314,6 +371,7 @@ class MaskController extends ChangeNotifier {
     _currentMode = _combinationSequence[0];
     _currentGear = 1;
     _remainingSecondsTotal = totalTreatmentSeconds;
+    _skinMetrics = SkinMetricData.initialBaseline;
     _isPowerOn = true;
 
     notifyListeners();
@@ -328,21 +386,96 @@ class MaskController extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadBoundDeviceAndAutoConnect() async {
+    try {
+      final saved = await DeviceStorageService.instance.getBoundDevice();
+      if (saved != null) {
+        _boundDevice = saved;
+        notifyListeners();
+        triggerAutoReconnect();
+      }
+    } catch (_) {}
+  }
+
+  /// Trigger auto reconnect scan loop
+  void triggerAutoReconnect() {
+    if (!isBound || isConnected) return;
+
+    _isAutoReconnecting = true;
+    _autoReconnectAttemptCount = 0;
+    notifyListeners();
+
+    _performAutoReconnectCycle();
+  }
+
+  /// Stop auto reconnect loop
+  void stopAutoReconnect() {
+    _isAutoReconnecting = false;
+    _autoReconnectTimer?.cancel();
+    _autoReconnectTimer = null;
+    _bleManager.stopScan();
+  }
+
+  void _performAutoReconnectCycle() {
+    _autoReconnectTimer?.cancel();
+    if (!isBound || isConnected || !_isAutoReconnecting) {
+      _isAutoReconnecting = false;
+      return;
+    }
+
+    _autoReconnectAttemptCount++;
+    // Scan for 5 seconds
+    _bleManager.startScan(timeout: const Duration(seconds: 5));
+
+    // Dynamic backoff strategy:
+    // First 6 attempts (~48s): scan every 8s (5s scan + 3s pause)
+    // Subsequent attempts: scan every 18s (5s scan + 13s pause) to conserve phone battery
+    final delaySeconds = _autoReconnectAttemptCount <= 6 ? 8 : 18;
+
+    _autoReconnectTimer = Timer(Duration(seconds: delaySeconds), () {
+      if (isBound && !isConnected && _isAutoReconnecting) {
+        _performAutoReconnectCycle();
+      }
+    });
+  }
+
+  /// Called when app resumes from background
+  void onAppResumed() {
+    if (isBound && !isConnected) {
+      triggerAutoReconnect();
+    }
+  }
+
   Future<bool> connect(BleDeviceInfo device) async {
+    stopAutoReconnect();
     final success = await _bleManager.connect(device);
+    if (success) {
+      _boundDevice = device;
+      await DeviceStorageService.instance.saveBoundDevice(device);
+      notifyListeners();
+    }
     return success;
   }
 
   /// Unbind / Disconnect from current device
   Future<void> unbindCurrentDevice() async {
+    stopAutoReconnect();
     _isPowerOn = false;
     _isCombinationActive = false;
     _stopCountdown();
-    await _bleManager.disconnect();
+
+    await DeviceStorageService.instance.clearBoundDevice();
+    _boundDevice = null;
     _activeDevice = null;
     _connectionState = BleConnectionState.disconnected;
+
+    await _bleManager.disconnect();
+    stopAutoReconnect();
+    _boundDevice = null;
+    _isAutoReconnecting = false;
     _remainingSecondsTotal = totalTreatmentSeconds;
     _currentGear = 1;
+    _skinMetrics = SkinMetricData.empty;
     notifyListeners();
   }
 
@@ -375,6 +508,8 @@ class MaskController extends ChangeNotifier {
 
   @override
   void dispose() {
+    stopAutoReconnect();
+    _scanResultsSub?.cancel();
     _connSub?.cancel();
     _statusSub?.cancel();
     _countdownTimer?.cancel();

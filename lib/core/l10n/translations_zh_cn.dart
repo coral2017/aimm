@@ -80,4 +80,10 @@ const Map<String, String> translationsZhCn = {
   'timeRemaining': '剩余时间',
   'min': '分',
   'sec': '秒',
+  'reconnecting': '正在回连...',
+  'offline': '离线',
+  'retryConnect': '立即重连',
+  'deviceUnbound': '设备已解绑',
+  'unbindConfirmTitle': '解绑设备',
+  'unbindConfirmDesc': '确定要解绑当前设备吗？解绑后将停止自动连接，需重新配对。',
 };

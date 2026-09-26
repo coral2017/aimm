@@ -18,11 +18,35 @@ class ConnectedDeviceDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<MaskController>();
-    final device = controller.activeDevice;
+    final device = controller.activeDevice ?? controller.boundDevice;
     final isConnected = controller.isConnected;
+    final isAutoReconnecting = controller.isAutoReconnecting;
 
-    if (!isConnected || device == null) {
+    if (device == null) {
       return const SizedBox.shrink();
+    }
+
+    // Status styling & label
+    Color statusColor;
+    Color statusBg;
+    String statusText;
+    IconData statusIcon;
+
+    if (isConnected) {
+      statusColor = const Color(0xFF2E7D32);
+      statusBg = const Color(0xFFEBF7EE);
+      statusText = context.tr('connected');
+      statusIcon = Icons.bluetooth_connected_rounded;
+    } else if (isAutoReconnecting) {
+      statusColor = const Color(0xFFE65100);
+      statusBg = const Color(0xFFFFF3E0);
+      statusText = context.tr('reconnecting');
+      statusIcon = Icons.bluetooth_searching_rounded;
+    } else {
+      statusColor = AppColors.textSecondary;
+      statusBg = const Color(0xFFEEEEEE);
+      statusText = context.tr('offline');
+      statusIcon = Icons.bluetooth_disabled_rounded;
     }
 
     return Dialog(
@@ -44,12 +68,12 @@ class ConnectedDeviceDialog extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.12),
+                        color: statusColor.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.bluetooth_connected_rounded,
-                        color: AppColors.primary,
+                      child: Icon(
+                        statusIcon,
+                        color: statusColor,
                         size: 22,
                       ),
                     ),
@@ -69,15 +93,15 @@ class ConnectedDeviceDialog extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEBF7EE),
+                            color: statusBg,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            context.tr('connected'),
-                            style: const TextStyle(
+                            statusText,
+                            style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF2E7D32),
+                              color: statusColor,
                             ),
                           ),
                         ),
@@ -117,7 +141,7 @@ class ConnectedDeviceDialog extends StatelessWidget {
                   const Divider(height: 16, color: Color(0xFFE5E0D6)),
                   _buildInfoRow(
                     label: context.tr('intensityLevel'),
-                    value: '${controller.currentGear} 档',
+                    value: isConnected ? '${controller.currentGear} 档' : '--',
                   ),
                   const Divider(height: 16, color: Color(0xFFE5E0D6)),
                   _buildInfoRow(
@@ -128,23 +152,88 @@ class ConnectedDeviceDialog extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+
+            // Action: Retry Connect (shown when disconnected)
+            if (!isConnected) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    controller.triggerAutoReconnect();
+                  },
+                  icon: isAutoReconnecting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(context.tr('retryConnect')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
 
             // Action: Unbind Device Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  await controller.unbindCurrentDevice();
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(context.tr('disconnected')),
-                        backgroundColor: AppColors.textPrimary,
-                        duration: const Duration(seconds: 2),
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      backgroundColor: Colors.white,
+                      title: Text(
+                        context.tr('unbindConfirmTitle'),
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
                       ),
-                    );
+                      content: Text(
+                        context.tr('unbindConfirmDesc'),
+                        style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.4),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: Text(
+                            context.tr('cancel'),
+                            style: const TextStyle(color: AppColors.textSecondary),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFD32F2F),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            elevation: 0,
+                          ),
+                          child: Text(context.tr('confirm')),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true) {
+                    await controller.unbindCurrentDevice();
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(context.tr('deviceUnbound')),
+                          backgroundColor: AppColors.textPrimary,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
                   }
                 },
                 icon: const Icon(Icons.link_off_rounded, size: 18),
@@ -155,7 +244,7 @@ class ConnectedDeviceDialog extends StatelessWidget {
                   elevation: 0,
                   side: const BorderSide(color: Color(0xFFFFCDD2)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
                 ),
               ),
             ),

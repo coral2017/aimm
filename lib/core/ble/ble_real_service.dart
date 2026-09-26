@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../storage/device_storage_service.dart';
 import 'ble_device_info.dart';
 import 'ble_protocol.dart';
 import 'ble_service_interface.dart';
@@ -44,6 +45,9 @@ class BleRealService implements IBleService {
   Future<void> startScan({Duration timeout = const Duration(seconds: 8)}) async {
     _setConnectionState(BleConnectionState.scanning);
 
+    final boundDevice = await DeviceStorageService.instance.getBoundDevice();
+    final boundId = boundDevice?.id;
+
     // Cancel existing scan subscription
     _scanSub?.cancel();
     _scanSub = FlutterBluePlus.scanResults.listen((results) {
@@ -64,13 +68,17 @@ class BleRealService implements IBleService {
             platName.contains('AIM');
         final hasService = r.advertisementData.serviceUuids
             .any((u) => u.toString().toUpperCase().contains('F760') || u.toString().toUpperCase().contains('F761'));
-        return isMask || hasService;
+        final isBoundDevice = boundId != null && r.device.remoteId.str == boundId;
+        return isMask || hasService || isBoundDevice;
       }).map((r) {
         final advName = r.advertisementData.advName.trim();
         final platName = r.device.platformName.trim();
+        final isBoundDevice = boundId != null && r.device.remoteId.str == boundId;
         final name = advName.isNotEmpty
             ? advName
-            : (platName.isNotEmpty ? platName : 'Alzmt Mask');
+            : (platName.isNotEmpty
+                ? platName
+                : (isBoundDevice ? (boundDevice?.name ?? 'Alzmt Mask') : 'Alzmt Mask'));
 
         return BleDeviceInfo(
           id: r.device.remoteId.str,

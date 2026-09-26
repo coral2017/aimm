@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+export 'skin_metric_model.dart';
 
 enum MaskModeType {
   rejuvenating(0, 'rejuvenating', Icons.auto_awesome_rounded),
@@ -20,25 +21,4 @@ enum MaskModeType {
       orElse: () => MaskModeType.rejuvenating,
     );
   }
-}
-
-class SkinMetricData {
-  final double smoothness; // 0.0 ~ 1.0
-  final double hydration; // 0.0 ~ 1.0
-  final double youthfulness; // 0.0 ~ 1.0
-  final double skinTone; // 0.0 ~ 1.0
-
-  const SkinMetricData({
-    this.smoothness = 0.72,
-    this.hydration = 0.58,
-    this.youthfulness = 0.45,
-    this.skinTone = 0.86,
-  });
-
-  static const SkinMetricData empty = SkinMetricData(
-    smoothness: 0.0,
-    hydration: 0.0,
-    youthfulness: 0.0,
-    skinTone: 0.0,
-  );
 }

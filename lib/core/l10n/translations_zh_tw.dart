@@ -80,4 +80,10 @@ const Map<String, String> translationsZhTw = {
   'timeRemaining': '剩餘時間',
   'min': '分',
   'sec': '秒',
+  'reconnecting': '正在回連...',
+  'offline': '離線',
+  'retryConnect': '立即重連',
+  'deviceUnbound': '設備已解綁',
+  'unbindConfirmTitle': '解綁設備',
+  'unbindConfirmDesc': '確定要解綁當前設備嗎？解綁後將停止自動連接，需重新配對。',
 };
