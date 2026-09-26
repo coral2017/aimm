@@ -7,7 +7,7 @@ import '../../models/mask_mode.dart';
 import '../../providers/mask_controller.dart';
 import 'beauty_hub_icons.dart';
 
-class CircularModeDial extends StatelessWidget {
+class CircularModeDial extends StatefulWidget {
   final VoidCallback onSaveTap;
   final VoidCallback onCombinationTap;
 
@@ -18,11 +18,54 @@ class CircularModeDial extends StatelessWidget {
   });
 
   @override
+  State<CircularModeDial> createState() => _CircularModeDialState();
+}
+
+class _CircularModeDialState extends State<CircularModeDial>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _breathingController;
+  late Animation<double> _breathingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // 呼吸光晕动画：周期 2.8 秒，平滑往复，Opacity 限制在 1.0 到 0.7 之间
+    _breathingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    );
+    _breathingAnimation = Tween<double>(begin: 1.0, end: 0.7).animate(
+      CurvedAnimation(
+        parent: _breathingController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final controller = context.watch<MaskController>();
     final currentMode = controller.currentMode;
     final isConnected = controller.isConnected;
     final isRunning = controller.isRunning;
+
+    // 工作状态下驱动平滑呼吸光晕，非运行状态下平缓归位
+    if (isRunning) {
+      if (!_breathingController.isAnimating) {
+        _breathingController.repeat(reverse: true);
+      }
+    } else {
+      if (_breathingController.isAnimating) {
+        _breathingController.stop();
+        _breathingController.value = 0.0;
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
@@ -105,6 +148,7 @@ class CircularModeDial extends StatelessWidget {
                       context: context,
                       mode: mode,
                       isSelected: currentMode == mode,
+                      isRunning: isRunning,
                       onTap: () => controller.setMode(mode),
                     );
                   }),
@@ -142,7 +186,7 @@ class CircularModeDial extends StatelessWidget {
               children: [
                 // Save Button (Figma 0:849)
                 InkWell(
-                  onTap: onSaveTap,
+                  onTap: widget.onSaveTap,
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -170,7 +214,7 @@ class CircularModeDial extends StatelessWidget {
 
                 // Combination Button (Figma 0:830)
                 InkWell(
-                  onTap: onCombinationTap,
+                  onTap: widget.onCombinationTap,
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -207,6 +251,7 @@ class CircularModeDial extends StatelessWidget {
     required BuildContext context,
     required MaskModeType mode,
     required bool isSelected,
+    required bool isRunning,
     required VoidCallback onTap,
   }) {
     // Exact Figma angles for all 6 modes
@@ -239,17 +284,38 @@ class CircularModeDial extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : Colors.transparent,
-                    shape: BoxShape.circle,
-                  ),
-                  child: BeautyHubIcon(
-                    modeId: mode.id,
-                    color: nodeColor,
-                    size: 24,
-                  ),
+                AnimatedBuilder(
+                  animation: _breathingAnimation,
+                  builder: (context, child) {
+                    final double breath =
+                        (isRunning && isSelected) ? _breathingAnimation.value : 1.0;
+                    return Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.12 * breath)
+                            : Colors.transparent,
+                        shape: BoxShape.circle,
+                        boxShadow: (isSelected && isRunning)
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(alpha: 0.25 * breath),
+                                  blurRadius: 8 * breath,
+                                  spreadRadius: 1.5 * breath,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Opacity(
+                        opacity: (isSelected && isRunning) ? breath : 1.0,
+                        child: BeautyHubIcon(
+                          modeId: mode.id,
+                          color: nodeColor,
+                          size: 24,
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 2),
                 Text(

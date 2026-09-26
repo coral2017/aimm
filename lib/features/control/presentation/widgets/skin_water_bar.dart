@@ -1,10 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 
 class SkinWaterBar extends StatefulWidget {
   final String label;
   final double progress; // 0.0 ~ 1.0
-  final bool isHighlighted; // 是否为当前模式主推指标 (附带金光轮廓)
   final bool isAnimating; // 是否处于运行中，驱动液面微波浪
   final double width;
   final double height;
@@ -13,9 +13,8 @@ class SkinWaterBar extends StatefulWidget {
     super.key,
     required this.label,
     required this.progress,
-    this.isHighlighted = false,
     this.isAnimating = false,
-    this.width = 24.0,
+    this.width = 18.0,
     this.height = 80.0,
   });
 
@@ -60,32 +59,16 @@ class _SkinWaterBarState extends State<SkinWaterBar>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 柱状容器 (Background trough + Border Glow)
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+        // 柱状胶囊容器 (Figma 18px x 80px, 完全圆角 9px)
+        Container(
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            color: const Color(0xFFF3ECE4), // 背景底槽色
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: widget.isHighlighted
-                  ? const Color(0xFFD4A373).withValues(alpha: 0.85)
-                  : Colors.transparent,
-              width: 1.5,
-            ),
-            boxShadow: widget.isHighlighted
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFFD4A373).withValues(alpha: 0.25),
-                      blurRadius: 6,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
+            color: AppColors.capsuleBackground, // Figma 0xFFF0EEE9 底槽色
+            borderRadius: BorderRadius.circular(widget.width / 2),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(10.5),
+            borderRadius: BorderRadius.circular(widget.width / 2),
             child: TweenAnimationBuilder<double>(
               tween: Tween<double>(
                 begin: 0.0,
@@ -112,28 +95,21 @@ class _SkinWaterBarState extends State<SkinWaterBar>
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
-        // 底部指标文字 (联动高亮深色与加粗)
+        // 底部指标文字 (对齐 Figma 规范，统一优雅呈现)
         SizedBox(
           width: 76,
-          child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 300),
-            style: TextStyle(
+          child: Text(
+            widget.label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
               fontSize: 12,
               fontFamily: 'Roboto',
-              color: widget.isHighlighted
-                  ? const Color(0xFF7A583E)
-                  : const Color(0xFF888888),
-              fontWeight: widget.isHighlighted
-                  ? FontWeight.w600
-                  : FontWeight.normal,
-            ),
-            child: Text(
-              widget.label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -160,13 +136,14 @@ class _WaterLiquidPainter extends CustomPainter {
     final fillHeight = size.height * progress;
     final topY = size.height - fillHeight;
 
+    // 对齐 Figma 原设计稿的经典品牌金棕色/香槟渐变
     final paint = Paint()
       ..shader = const LinearGradient(
-        begin: Alignment.bottomCenter,
-        end: Alignment.topCenter,
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
         colors: [
-          Color(0xFFE2C4A6), // 底部温润精油色
-          Color(0xFFF2DFCE), // 顶部水光浅色
+          Color(0xFFA6855B), // 顶部温暖明亮
+          Color(0xFF8B683F), // 底部沉稳醇厚
         ],
       ).createShader(Rect.fromLTWH(0, topY, size.width, fillHeight));
 
@@ -175,9 +152,9 @@ class _WaterLiquidPainter extends CustomPainter {
     path.lineTo(0, topY);
 
     if (isAnimating && progress > 0.03 && progress < 0.98) {
-      // 绘制液面动态正弦微波纹 (振幅 1.5dp)
+      // 绘制液面动态正弦微波纹 (振幅 1.2dp，细腻活性)
       for (double x = 0; x <= size.width; x += 1.0) {
-        final y = topY + sin((x / size.width) * 2 * pi + wavePhase) * 1.5;
+        final y = topY + sin((x / size.width) * 2 * pi + wavePhase) * 1.2;
         path.lineTo(x, y);
       }
     } else {

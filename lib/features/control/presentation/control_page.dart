@@ -6,7 +6,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../report/presentation/analysis_report_page.dart';
 import '../providers/mask_controller.dart';
 import 'widgets/circular_mode_dial.dart';
-import 'widgets/combination_mode_dialog.dart';
 import 'widgets/high_intensity_dialog.dart';
 import 'widgets/intensity_slider.dart';
 import 'widgets/save_mode_dialog.dart';
@@ -148,7 +147,23 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
               // Card 2: Center Circular Mode Dial (Beauty Hub) (Figma 0:810 / 18:591)
               CircularModeDial(
                 onSaveTap: () => SaveModeDialog.show(context),
-                onCombinationTap: () => CombinationModeDialog.show(context),
+                onCombinationTap: () {
+                  final controller = context.read<MaskController>();
+                  if (!controller.isConnected) {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(context.tr('disconnected')),
+                        backgroundColor: AppColors.textPrimary,
+                        duration: const Duration(seconds: 1),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    );
+                    return;
+                  }
+                  controller.startCombinationMode(isRandom: false);
+                },
               ),
 
               const SizedBox(height: 2),

@@ -141,7 +141,9 @@ class ConnectedDeviceDialog extends StatelessWidget {
                   const Divider(height: 16, color: Color(0xFFE5E0D6)),
                   _buildInfoRow(
                     label: context.tr('intensityLevel'),
-                    value: isConnected ? '${controller.currentGear} 档' : '--',
+                    value: isConnected
+                        ? context.tr('gearFormat').replaceAll('{gear}', '${controller.currentGear}')
+                        : '--',
                   ),
                   const Divider(height: 16, color: Color(0xFFE5E0D6)),
                   _buildInfoRow(

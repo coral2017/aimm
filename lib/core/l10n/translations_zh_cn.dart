@@ -86,4 +86,5 @@ const Map<String, String> translationsZhCn = {
   'deviceUnbound': '设备已解绑',
   'unbindConfirmTitle': '解绑设备',
   'unbindConfirmDesc': '确定要解绑当前设备吗？解绑后将停止自动连接，需重新配对。',
+  'gearFormat': '{gear} 档',
 };

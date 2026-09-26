@@ -86,4 +86,5 @@ const Map<String, String> translationsZhTw = {
   'deviceUnbound': '設備已解綁',
   'unbindConfirmTitle': '解綁設備',
   'unbindConfirmDesc': '確定要解綁當前設備嗎？解綁後將停止自動連接，需重新配對。',
+  'gearFormat': '{gear} 檔',
 };

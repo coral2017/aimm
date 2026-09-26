@@ -4,7 +4,6 @@ import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../connection/presentation/connected_device_dialog.dart';
 import '../../../connection/presentation/device_connection_dialog.dart';
-import '../../models/skin_metric_model.dart';
 import '../../providers/mask_controller.dart';
 import 'skin_water_bar.dart';
 
@@ -201,48 +200,28 @@ class StatusMetricCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // 4 Vertical Metric Water Bars with Liquid Wave and Mode Highlight Link
+          // 4 Vertical Metric Water Bars with Liquid Wave
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               SkinWaterBar(
                 label: context.tr('smoothness'),
                 progress: metrics.smoothness,
-                isHighlighted: SkinMetricConfig.isHighlighted(
-                  mode: controller.currentMode,
-                  metric: SkinMetricType.delicacy,
-                  isCombination: controller.isCombinationActive,
-                ),
                 isAnimating: controller.isRunning,
               ),
               SkinWaterBar(
                 label: context.tr('hydration'),
                 progress: metrics.hydration,
-                isHighlighted: SkinMetricConfig.isHighlighted(
-                  mode: controller.currentMode,
-                  metric: SkinMetricType.hydration,
-                  isCombination: controller.isCombinationActive,
-                ),
                 isAnimating: controller.isRunning,
               ),
               SkinWaterBar(
                 label: context.tr('youthfulness'),
                 progress: metrics.youthfulness,
-                isHighlighted: SkinMetricConfig.isHighlighted(
-                  mode: controller.currentMode,
-                  metric: SkinMetricType.youthfulness,
-                  isCombination: controller.isCombinationActive,
-                ),
                 isAnimating: controller.isRunning,
               ),
               SkinWaterBar(
                 label: context.tr('skinTone'),
                 progress: metrics.skinTone,
-                isHighlighted: SkinMetricConfig.isHighlighted(
-                  mode: controller.currentMode,
-                  metric: SkinMetricType.clarity,
-                  isCombination: controller.isCombinationActive,
-                ),
                 isAnimating: controller.isRunning,
               ),
             ],
