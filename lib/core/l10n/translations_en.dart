@@ -36,6 +36,7 @@ const Map<String, String> translationsEn = {
   'control': 'Control',
   'profile': 'Profile',
   'mustStartBeforeAdjust': 'Please tap Start before adjusting intensity',
+  'pleaseSelectMode': 'Please select a treatment mode first',
   'highIntensityTitle': 'Confirm Intensity Increase',
   'highIntensityDesc': 'This setting operates at a very high intensity and may exceed standard tolerance limits. Please proceed only if you are certain of your physical tolerance.',
   'highIntensityDisclaimer': 'Note: By proceeding, I acknowledge the risks and accept full responsibility for increasing the intensity.',
@@ -87,4 +88,5 @@ const Map<String, String> translationsEn = {
   'unbindConfirmTitle': 'Unbind Device',
   'unbindConfirmDesc': 'Are you sure you want to unbind this device? Auto-reconnection will be stopped.',
   'gearFormat': 'Level {gear}',
+  'skinContactDetached': 'No skin contact or moisture detected. Please wear mask properly and retry.',
 };

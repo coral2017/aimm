@@ -108,6 +108,7 @@ class BleProtocol {
     final battery = packet[9].clamp(0, 100);
     final workMinutes = packet[10].clamp(0, 59);
     final workSeconds = packet[11].clamp(0, 59);
+    final contactStatus = packet[16];
 
     return BleStatusReport(
       mode: mode,
@@ -116,6 +117,7 @@ class BleProtocol {
       battery: battery,
       workMinutes: workMinutes,
       workSeconds: workSeconds,
+      contactStatus: contactStatus,
     );
   }
 }
@@ -128,6 +130,7 @@ class BleStatusReport {
   final int battery;
   final int workMinutes;
   final int workSeconds;
+  final int contactStatus;
 
   const BleStatusReport({
     required this.mode,
@@ -136,10 +139,11 @@ class BleStatusReport {
     required this.battery,
     required this.workMinutes,
     required this.workSeconds,
+    this.contactStatus = 0,
   });
 
   @override
   String toString() {
-    return 'BleStatusReport(mode: $mode, gear: $gear, isOpen: $isOpen, battery: $battery%, time: ${workMinutes}m${workSeconds}s)';
+    return 'BleStatusReport(mode: $mode, gear: $gear, isOpen: $isOpen, battery: $battery%, time: ${workMinutes}m${workSeconds}s, contactStatus: $contactStatus)';
   }
 }

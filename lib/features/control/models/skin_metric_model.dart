@@ -95,10 +95,10 @@ class SkinMetricConfig {
     }
   }
 
-  /// 获取档位增益系数 Kgear
+  /// 获取档位增益系数 Kgear (1~10档)
   static double getGearFactor(int currentGear) {
-    final clampedGear = currentGear.clamp(1, 16);
-    return 1.0 + (clampedGear - 1) * 0.05;
+    final clampedGear = currentGear.clamp(1, 10);
+    return 1.0 + (clampedGear - 1) * 0.08;
   }
 }
 

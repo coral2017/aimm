@@ -36,6 +36,7 @@ const Map<String, String> translationsZhCn = {
   'control': '遥控',
   'profile': '个人中心',
   'mustStartBeforeAdjust': '点击开始才能调档位',
+  'pleaseSelectMode': '请先选择护理模式',
   'highIntensityTitle': '确认调高强度',
   'highIntensityDesc': '本档位强度较高，可能超过标准耐受极限。请在确认自身耐受度后谨慎开启。',
   'highIntensityDisclaimer': '注意：继续操作即代表我已知晓风险并自愿承担调高强度带来的相关责任。',
@@ -87,4 +88,5 @@ const Map<String, String> translationsZhCn = {
   'unbindConfirmTitle': '解绑设备',
   'unbindConfirmDesc': '确定要解绑当前设备吗？解绑后将停止自动连接，需重新配对。',
   'gearFormat': '{gear} 档',
+  'skinContactDetached': '未检测到贴合皮肤或缺乏水分，请贴合面部后开启',
 };

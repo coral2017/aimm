@@ -51,7 +51,6 @@ class _CircularModeDialState extends State<CircularModeDial>
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<MaskController>();
-    final currentMode = controller.currentMode;
     final isConnected = controller.isConnected;
     final isRunning = controller.isRunning;
 
@@ -96,18 +95,17 @@ class _CircularModeDialState extends State<CircularModeDial>
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
-                    letterSpacing: -0.2,
                   ),
                 ),
                 if (controller.isCombinationActive)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${context.tr('combination')} ${controller.combinationCurrentStage + 1}/6',
+                      context.tr('combination'),
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -144,10 +142,11 @@ class _CircularModeDialState extends State<CircularModeDial>
 
                   // 6 Mode Nodes positioned around orbit ring
                   ...MaskModeType.values.map((mode) {
+                    final isSelected = !controller.isCombinationActive && controller.selectedMode == mode;
                     return _buildModeNode(
                       context: context,
                       mode: mode,
-                      isSelected: currentMode == mode,
+                      isSelected: isSelected,
                       isRunning: isRunning,
                       onTap: () => controller.setMode(mode),
                     );
@@ -168,6 +167,19 @@ class _CircularModeDialState extends State<CircularModeDial>
                         );
                         return;
                       }
+                      if (controller.selectedMode == null && !controller.isCombinationActive) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(context.tr('pleaseSelectMode')),
+                            backgroundColor: AppColors.primary,
+                            duration: const Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        );
+                        return;
+                      }
                       controller.togglePower();
                     },
                   ),
@@ -180,7 +192,7 @@ class _CircularModeDialState extends State<CircularModeDial>
 
           // Bottom Action Row (save & Combination) (Figma 0:849 & 0:830)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -215,24 +227,46 @@ class _CircularModeDialState extends State<CircularModeDial>
                 // Combination Button (Figma 0:830)
                 InkWell(
                   onTap: widget.onCombinationTap,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: controller.isCombinationActive
+                          ? AppColors.primary
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: controller.isCombinationActive && isRunning
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.35 * _breathingAnimation.value),
+                                blurRadius: 10,
+                                spreadRadius: 1,
+                              ),
+                            ]
+                          : null,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.layers_outlined,
+                        Icon(
+                          Icons.layers_rounded,
                           size: 16,
-                          color: AppColors.textPrimary,
+                          color: controller.isCombinationActive
+                              ? Colors.white
+                              : AppColors.textPrimary,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 5),
                         Text(
                           context.tr('combination'),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
+                            fontWeight: controller.isCombinationActive
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            color: controller.isCombinationActive
+                                ? Colors.white
+                                : AppColors.textPrimary,
                           ),
                         ),
                       ],

@@ -97,10 +97,10 @@ class IntensitySlider extends StatelessWidget {
                       overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
                     ),
                     child: Slider(
-                      value: isConnected ? currentGear.toDouble() : 1.0,
+                      value: isConnected ? currentGear.clamp(1, 10).toDouble() : 1.0,
                       min: 1.0,
-                      max: 16.0,
-                      divisions: 15,
+                      max: 10.0,
+                      divisions: 9,
                       onChanged: isConnected
                           ? (value) {
                               if (!isRunning) {
@@ -108,7 +108,7 @@ class IntensitySlider extends StatelessWidget {
                                 return;
                               }
                               final newGear = value.round();
-                              if (newGear > currentGear && newGear >= 10) {
+                              if (newGear > currentGear && newGear >= 8) {
                                 onHighIntensityRequested(newGear);
                               } else {
                                 controller.setGear(newGear);
@@ -129,9 +129,9 @@ class IntensitySlider extends StatelessWidget {
                     onBlockedTap();
                     return;
                   }
-                  if (currentGear < 16) {
+                  if (currentGear < 10) {
                     final nextGear = currentGear + 1;
-                    if (nextGear >= 10) {
+                    if (nextGear >= 8) {
                       onHighIntensityRequested(nextGear);
                     } else {
                       controller.setGear(nextGear);

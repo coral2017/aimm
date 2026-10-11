@@ -22,8 +22,8 @@ void main() {
 
     test('Gear factor calculation', () {
       expect(SkinMetricConfig.getGearFactor(1), 1.0);
-      expect(SkinMetricConfig.getGearFactor(2), 1.05);
-      expect(SkinMetricConfig.getGearFactor(5), 1.20);
+      expect(SkinMetricConfig.getGearFactor(2), 1.08);
+      expect(SkinMetricConfig.getGearFactor(5), 1.32);
     });
 
     test('Mode highlight linking', () {

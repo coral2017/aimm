@@ -162,7 +162,7 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
                     );
                     return;
                   }
-                  controller.startCombinationMode(isRandom: false);
+                  controller.switchToCombinationMode();
                 },
               ),
 

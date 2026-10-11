@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../storage/device_storage_service.dart';
 import 'ble_device_info.dart';
@@ -132,10 +132,13 @@ class BleRealService implements IBleService {
       final device = BluetoothDevice.fromId(deviceInfo.id);
       _activeDevice = device;
 
+      debugPrint('🔗 [BLE 连接] 正在发起 GATT 连接: ${deviceInfo.name} (${deviceInfo.id})');
       await device.connect(timeout: const Duration(seconds: 10));
+      debugPrint('🔗 [BLE 连接] 底层 GATT 连接成功，正在发现服务...');
 
       _deviceStateSub?.cancel();
       _deviceStateSub = device.connectionState.listen((state) {
+        debugPrint('🔗 [BLE 状态变化] Gatt State -> $state');
         if (state == BluetoothConnectionState.disconnected) {
           _cleanConnection();
         }
@@ -144,8 +147,10 @@ class BleRealService implements IBleService {
       // Discover services
       final services = await device.discoverServices();
       for (final s in services) {
+        debugPrint('   [GATT 服务] ${s.uuid}');
         if (s.uuid.toString().toUpperCase().contains('F760')) {
           for (final c in s.characteristics) {
+            debugPrint('     └─ [GATT 特征值] ${c.uuid} (write:${c.properties.write}, writeNoResp:${c.properties.writeWithoutResponse}, notify:${c.properties.notify})');
             if (c.uuid.toString().toUpperCase().contains('F761')) {
               _writeCharacteristic = c;
               _notifyCharacteristic = c;
@@ -157,6 +162,7 @@ class BleRealService implements IBleService {
 
       // Fallback search if exact F760 was formatted differently
       if (_writeCharacteristic == null) {
+        debugPrint('   ⚠️ 未精确匹配到 F760/F761，正在通过属性特征兜底匹配...');
         for (final s in services) {
           for (final c in s.characteristics) {
             if (c.properties.write || c.properties.writeWithoutResponse) {
@@ -169,28 +175,54 @@ class BleRealService implements IBleService {
         }
       }
 
+      debugPrint('🔗 [BLE 匹配完成] 写特征: ${_writeCharacteristic?.uuid}, 监听特征: ${_notifyCharacteristic?.uuid}');
+
       // Enable notifications
       if (_notifyCharacteristic != null) {
         await _notifyCharacteristic!.setNotifyValue(true);
+        debugPrint('🔔 [BLE 监听] 已成功开启特征值 Notify 监听: ${_notifyCharacteristic!.uuid}');
         _notifySub?.cancel();
         _notifySub = _notifyCharacteristic!.onValueReceived.listen((data) {
-          final report = BleProtocol.parseStatusPacket(Uint8List.fromList(data));
+          final hexStr = data.map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
+          debugPrint('📥 [BLE RX 收到从机报文] ($hexStr) [字节数=${data.length}]');
+
+          final bytes = Uint8List.fromList(data);
+          final report = BleProtocol.parseStatusPacket(bytes);
           if (report != null) {
+            debugPrint('   └─✅ [从机状态] 模式=${report.mode}, 档位=${report.gear}, 运行开关=${report.isOpen ? "【开 ON】" : "【关 OFF】"}, 电量=${report.battery}%, 时间=${report.workMinutes}分${report.workSeconds}秒');
             _statusReportController.add(report);
+          } else {
+            // Diagnose parsing failure
+            String reason = '';
+            if (data.length != 20) {
+              reason = '长度非20字节 (实际${data.length})';
+            } else if (data[0] != 0x45 || data[1] != 0xA2) {
+              reason = '帧头不符合45 A2';
+            } else if (data[18] != 0x2C || data[19] != 0xFF) {
+              reason = '帧尾不符合2C FF';
+            } else if (data[5] != 0xA4 && data[5] != 0xA1) {
+              reason = '功能码非A4/A1 (0x${data[5].toRadixString(16)})';
+            } else {
+              reason = '校验不通过';
+            }
+            debugPrint('   └─⚠️ [从机报文未解析] $reason');
           }
         });
       }
 
       _connectedDevice = deviceInfo.copyWith(isConnected: true);
       _setConnectionState(BleConnectionState.connected);
+      debugPrint('🎉 [BLE 连接成功] 设备已绑定并就绪: ${deviceInfo.name}');
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('❌ [BLE 连接异常] 连接失败: $e\n$stack');
       _cleanConnection();
       return false;
     }
   }
 
   void _cleanConnection() {
+    debugPrint('🔌 [BLE 断开] 清理连接状态与资源');
     _notifySub?.cancel();
     _deviceStateSub?.cancel();
     _writeCharacteristic = null;
@@ -202,6 +234,7 @@ class BleRealService implements IBleService {
 
   @override
   Future<void> disconnect() async {
+    debugPrint('🔌 [BLE 断开] 主动发起断开连接');
     _setConnectionState(BleConnectionState.disconnecting);
     try {
       await _activeDevice?.disconnect();
@@ -211,17 +244,25 @@ class BleRealService implements IBleService {
 
   @override
   Future<bool> sendControlPacket(Uint8List packet) async {
+    final hexStr = packet.map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
+    debugPrint('📤 [BLE TX 主机发送指令] ($hexStr) [字节数=${packet.length}]');
+
     if (_connectionState != BleConnectionState.connected || _writeCharacteristic == null) {
+      debugPrint('   └─❌ 发送失败: 设备未连接或写特征值未就绪 (State: $_connectionState, Char: ${_writeCharacteristic?.uuid})');
       return false;
     }
     try {
       await _writeCharacteristic!.write(packet, withoutResponse: false);
+      debugPrint('   └─✅ 发送成功 (模式: WriteWithResponse)');
       return true;
     } catch (e) {
+      debugPrint('   └─⚠️ WriteWithResponse 失败 ($e)，正在尝试 WithoutResponse 模式重发...');
       try {
         await _writeCharacteristic!.write(packet, withoutResponse: true);
+        debugPrint('   └─✅ 发送成功 (模式: WriteWithoutResponse)');
         return true;
-      } catch (_) {
+      } catch (e2) {
+        debugPrint('   └─❌ 两次写入尝试均失败: $e2');
         return false;
       }
     }
