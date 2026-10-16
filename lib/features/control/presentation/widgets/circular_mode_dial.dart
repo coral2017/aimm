@@ -97,22 +97,6 @@ class _CircularModeDialState extends State<CircularModeDial>
                     color: AppColors.textPrimary,
                   ),
                 ),
-                if (controller.isCombinationActive)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      context.tr('combination'),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primaryDark,
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -343,7 +327,7 @@ class _CircularModeDialState extends State<CircularModeDial>
                       child: Opacity(
                         opacity: (isSelected && isRunning) ? breath : 1.0,
                         child: BeautyHubIcon(
-                          modeId: mode.id,
+                          mode: mode,
                           color: nodeColor,
                           size: 24,
                         ),

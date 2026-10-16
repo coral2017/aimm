@@ -63,7 +63,7 @@ class BleProtocol {
 
     // Content (6 bytes)
     packet[6] = mode & 0xFF; // Mode (0x00 ~ 0x0B)
-    packet[7] = gear.clamp(1, 16) & 0xFF; // Gear (0x01 ~ 0x10)
+    packet[7] = gear & 0xFF; // Gear (BLE communication gear value e.g. 10 ~ 53)
     packet[8] = isOpen ? 0x01 : 0x00; // Switch
     packet[9] = 0x00; // Reserved
     packet[10] = 0x00; // Reserved

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../models/mask_mode.dart';
 import '../../providers/mask_controller.dart';
 
 class SaveModeDialog extends StatefulWidget {
@@ -19,22 +20,15 @@ class SaveModeDialog extends StatefulWidget {
 }
 
 class _SaveModeDialogState extends State<SaveModeDialog> {
-  late final TextEditingController _nameController;
+  late MaskModeType _selectedMode;
+  late int _selectedGear;
 
   @override
   void initState() {
     super.initState();
     final controller = context.read<MaskController>();
-    final modeName = context.read<MaskController>().currentMode.name;
-    _nameController = TextEditingController(
-      text: 'My ${modeName.capitalize()} Routine (L${controller.currentGear})',
-    );
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
+    _selectedMode = controller.selectedMode ?? MaskModeType.rejuvenating;
+    _selectedGear = controller.currentGear.clamp(1, MaskController.maxGear).toInt();
   }
 
   @override
@@ -44,66 +38,161 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(22.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.tr('saveMode'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                  onPressed: () => Navigator.of(context).pop(),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+
+            // 栏位 1: 模式
             Text(
-              context.tr('saveMode'),
+              context.tr('mode'),
               style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.capsuleBackground,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE5E0D6)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<MaskModeType>(
+                  value: _selectedMode,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textPrimary),
+                  items: MaskModeType.values.map((mode) {
+                    return DropdownMenuItem<MaskModeType>(
+                      value: mode,
+                      child: Row(
+                        children: [
+                          Icon(mode.icon, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 10),
+                          Text(
+                            context.tr(mode.l10nKey),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (newMode) {
+                    if (newMode != null) {
+                      setState(() => _selectedMode = newMode);
+                    }
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            // 栏位 2: 档位
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.tr('gear'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Text(
+                  context.tr('gearFormat').replaceAll('{gear}', '$_selectedGear'),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.capsuleBackground,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE5E0D6)),
               ),
               child: Row(
                 children: [
-                  Icon(controller.currentMode.icon, color: AppColors.primary, size: 22),
-                  const SizedBox(width: 10),
-                  Text(
-                    '${context.tr(controller.currentMode.l10nKey)}  •  Level ${controller.currentGear.toString().padLeft(2, '0')}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline_rounded, color: AppColors.primary, size: 24),
+                    onPressed: _selectedGear > 1
+                        ? () => setState(() => _selectedGear--)
+                        : null,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: AppColors.primary,
+                        inactiveTrackColor: Colors.black12,
+                        thumbColor: AppColors.primary,
+                        trackHeight: 4,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                      ),
+                      child: Slider(
+                        value: _selectedGear.toDouble(),
+                        min: 1,
+                        max: MaskController.maxGear.toDouble(),
+                        divisions: MaskController.maxGear - 1,
+                        onChanged: (val) {
+                          setState(() => _selectedGear = val.round());
+                        },
+                      ),
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 24),
+                    onPressed: _selectedGear < MaskController.maxGear
+                        ? () => setState(() => _selectedGear++)
+                        : null,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'Enter preset name',
-                filled: true,
-                fillColor: const Color(0xFFF9F9FB),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE5E0D6)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE5E0D6)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                ),
-              ),
-            ),
+
             const SizedBox(height: 24),
+
+            // 操作按钮
             Row(
               children: [
                 Expanded(
@@ -115,7 +204,7 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
                     ),
                     child: Text(context.tr('cancel')),
                   ),
@@ -123,15 +212,20 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      controller.saveCurrentPreset(_nameController.text.trim());
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(context.tr('modeSavedSuccess')),
-                          backgroundColor: AppColors.primary,
-                        ),
+                    onPressed: () async {
+                      await controller.savePreset(
+                        mode: _selectedMode,
+                        gear: _selectedGear,
                       );
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(context.tr('modeSavedSuccess')),
+                            backgroundColor: AppColors.primary,
+                          ),
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -140,7 +234,7 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
                     ),
                     child: Text(context.tr('save')),
                   ),
@@ -151,12 +245,5 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
         ),
       ),
     );
-  }
-}
-
-extension StringExtension on String {
-  String capitalize() {
-    if (isEmpty) return this;
-    return '${this[0].toUpperCase()}${substring(1)}';
   }
 }

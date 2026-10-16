@@ -11,106 +11,179 @@ class SavedModesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<MaskController>();
     final presets = controller.savedPresets;
+    final canAddCurrent = controller.selectedMode != null && !controller.isCurrentSaved;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           context.tr('savedModes'),
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
         ),
+        actions: [
+          if (canAddCurrent)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await controller.savePreset(
+                      mode: controller.selectedMode!,
+                      gear: controller.currentGear,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(context.tr('modeSavedSuccess')),
+                          backgroundColor: AppColors.primary,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF07C160), // 小程序标准绿色按钮
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    minimumSize: const Size(64, 32),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  child: Text(
+                    context.tr('addSave'),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: presets.isEmpty
-          ? const Center(
-              child: Text(
-                'No saved presets yet.',
-                style: TextStyle(color: AppColors.textSecondary),
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.bookmark_border_rounded,
+                    size: 54,
+                    color: AppColors.textSecondary.withValues(alpha: 0.4),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    context.tr('noSavedPresets'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             )
           : ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               itemCount: presets.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (ctx, index) {
                 final preset = presets[index];
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: AppColors.shadow,
-                        blurRadius: 10,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(preset.mode.icon, color: AppColors.primary, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              preset.name,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${context.tr(preset.mode.l10nKey)}  •  Level ${preset.gear.toString().padLeft(2, '0')}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
+                final isCurrentlyActive = controller.selectedMode == preset.mode &&
+                    controller.currentGear == preset.gear &&
+                    controller.isRunning;
+
+                return Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  elevation: 0,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {
+                      controller.applyPresetAndStart(preset);
+                      Navigator.of(context).pop();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isCurrentlyActive
+                              ? AppColors.primary
+                              : const Color(0xFFF0ECE4),
+                          width: isCurrentlyActive ? 1.5 : 1.0,
                         ),
                       ),
-                      ElevatedButton(
-                        onPressed: () {
-                          controller.applyPreset(preset);
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Applied ${preset.name}'),
-                              backgroundColor: AppColors.primary,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                              color: isCurrentlyActive
+                                  ? AppColors.primary.withValues(alpha: 0.15)
+                                  : AppColors.capsuleBackground,
+                              shape: BoxShape.circle,
                             ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            child: Icon(
+                              preset.mode.icon,
+                              color: isCurrentlyActive
+                                  ? AppColors.primaryDark
+                                  : AppColors.primary,
+                              size: 20,
+                            ),
                           ),
-                          minimumSize: const Size(54, 34),
-                        ),
-                        child: const Text('Apply', style: TextStyle(fontSize: 12)),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Text(
+                                  context.tr(preset.mode.l10nKey),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    context.tr('gearFormat').replaceAll('{gear}', '${preset.gear}'),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primaryDark,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              size: 20,
+                              color: AppColors.textSecondary,
+                            ),
+                            onPressed: () => controller.deletePreset(preset.id),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.textSecondary),
-                        onPressed: () => controller.deletePreset(preset.id),
-                      ),
-                    ],
+                    ),
                   ),
                 );
               },

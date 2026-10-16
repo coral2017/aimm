@@ -5,7 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 class SkinWaterBar extends StatefulWidget {
   final String label;
   final double progress; // 0.0 ~ 1.0
-  final bool isAnimating; // 是否处于运行中，驱动液面微波浪
+  final bool isAnimating; // 是否处于运行中，驱动液面波浪动效
   final double width;
   final double height;
 
@@ -31,7 +31,7 @@ class _SkinWaterBarState extends State<SkinWaterBar>
     super.initState();
     _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500),
+      duration: const Duration(milliseconds: 2400),
     );
     if (widget.isAnimating) {
       _waveController.repeat();
@@ -151,10 +151,10 @@ class _WaterLiquidPainter extends CustomPainter {
     path.moveTo(0, size.height);
     path.lineTo(0, topY);
 
-    if (isAnimating && progress > 0.03 && progress < 0.98) {
-      // 绘制液面动态正弦微波纹 (振幅 1.2dp，细腻活性)
-      for (double x = 0; x <= size.width; x += 1.0) {
-        final y = topY + sin((x / size.width) * 2 * pi + wavePhase) * 1.2;
+    if (isAnimating && progress > 0.02 && progress < 0.98) {
+      // 细腻微澜波纹：增大波纹密度(约1.75个波长周期)，降低振幅(0.75dp)，呈现精华凝露的精致水光微漾
+      for (double x = 0; x <= size.width; x += 0.8) {
+        final y = topY + sin((x / size.width) * 3.5 * pi + wavePhase) * 0.75;
         path.lineTo(x, y);
       }
     } else {

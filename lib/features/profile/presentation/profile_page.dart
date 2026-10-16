@@ -72,7 +72,7 @@ class ProfilePage extends StatelessWidget {
                   title: context.tr('helpCenter'),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('AI-Smart Mask V2 Manual & FAQ v1.0')),
+                      const SnackBar(content: Text('AI-Smart Mask V2 Manual & FAQ v1.0.7')),
                     );
                   },
                 ),
@@ -142,11 +142,7 @@ class ProfilePage extends StatelessWidget {
             height: 76,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFFE8DCCF), Color(0xFFC7B39E)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              border: Border.all(color: const Color(0xFFE8DCCF), width: 2),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.2),
@@ -155,11 +151,24 @@ class ProfilePage extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Center(
-              child: Icon(
-                Icons.face_retouching_natural_rounded,
-                size: 42,
-                color: AppColors.primaryDark,
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/avatar.jpg',
+                width: 76,
+                height: 76,
+                cacheWidth: 300,
+                cacheHeight: 300,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xFFE8DCCF),
+                  child: const Center(
+                    child: Icon(
+                      Icons.face_retouching_natural_rounded,
+                      size: 42,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

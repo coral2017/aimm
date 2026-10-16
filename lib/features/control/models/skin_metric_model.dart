@@ -8,56 +8,57 @@ enum SkinMetricType {
 }
 
 class SkinMetricConfig {
-  static const double baseTotalGrowth = 0.50; // 累计总增量
+  static const double baseTotalGrowth = 0.70; // 累计满程基础增量期望 (基线0.10 + 0.70 ≈ 0.80 最低指标)
   static const int totalSeconds = 720; // 12 分钟 (720秒)
-  static const double vBase = baseTotalGrowth / totalSeconds; // 约 0.000694/秒
+  // vBase * primaryWeight(1.214) * 720 ≈ 0.85 -> 满程达约 0.95；最低指标(1.00)达 0.80，间距控制在 15% 内
+  static const double vBase = baseTotalGrowth / totalSeconds;
 
-  // 模式权重映射表 (每项归一化校验总和为 4.0)
+  // 模式权重映射表 (主攻指标 1.214 -> ~95%，次要指标 1.114 -> ~88%，其他基础 1.00 -> ~80%)
   static const Map<MaskModeType, Map<SkinMetricType, double>> modeWeights = {
     MaskModeType.revitalizing: {
-      SkinMetricType.delicacy: 1.0,
-      SkinMetricType.hydration: 1.8, // 主增
-      SkinMetricType.youthfulness: 0.5,
-      SkinMetricType.clarity: 0.7,
+      SkinMetricType.delicacy: 1.114,
+      SkinMetricType.hydration: 1.214, // 主增 ~95%
+      SkinMetricType.youthfulness: 1.00,
+      SkinMetricType.clarity: 1.00,
     },
     MaskModeType.intensiveCare: {
-      SkinMetricType.delicacy: 0.9,
-      SkinMetricType.hydration: 1.0,
-      SkinMetricType.youthfulness: 0.5,
-      SkinMetricType.clarity: 1.6, // 主增
+      SkinMetricType.delicacy: 1.00,
+      SkinMetricType.hydration: 1.114,
+      SkinMetricType.youthfulness: 1.00,
+      SkinMetricType.clarity: 1.214, // 主增 ~95%
     },
     MaskModeType.lifting: {
-      SkinMetricType.delicacy: 1.0,
-      SkinMetricType.hydration: 0.5,
-      SkinMetricType.youthfulness: 1.8, // 主增
-      SkinMetricType.clarity: 0.7,
+      SkinMetricType.delicacy: 1.114,
+      SkinMetricType.hydration: 1.00,
+      SkinMetricType.youthfulness: 1.214, // 主增 ~95%
+      SkinMetricType.clarity: 1.00,
     },
     MaskModeType.firming: {
-      SkinMetricType.delicacy: 1.2,
-      SkinMetricType.hydration: 0.5,
-      SkinMetricType.youthfulness: 1.6, // 主增
-      SkinMetricType.clarity: 0.7,
+      SkinMetricType.delicacy: 1.114,
+      SkinMetricType.hydration: 1.00,
+      SkinMetricType.youthfulness: 1.214, // 主增 ~95%
+      SkinMetricType.clarity: 1.00,
     },
     MaskModeType.plumping: {
-      SkinMetricType.delicacy: 1.6, // 主增
-      SkinMetricType.hydration: 1.3,
-      SkinMetricType.youthfulness: 0.6,
-      SkinMetricType.clarity: 0.5,
+      SkinMetricType.delicacy: 1.214, // 主增 ~95%
+      SkinMetricType.hydration: 1.00,
+      SkinMetricType.youthfulness: 1.114,
+      SkinMetricType.clarity: 1.00,
     },
     MaskModeType.rejuvenating: {
-      SkinMetricType.delicacy: 0.7,
-      SkinMetricType.hydration: 0.7,
-      SkinMetricType.youthfulness: 1.3, // 主增
-      SkinMetricType.clarity: 1.3, // 主增
+      SkinMetricType.delicacy: 1.00,
+      SkinMetricType.hydration: 1.03,
+      SkinMetricType.youthfulness: 1.214, // 主增 ~95%
+      SkinMetricType.clarity: 1.114,
     },
   };
 
-  // 综合模式权重 (全维平衡养护)
+  // 综合模式权重基线 (动态接力时按阶段模式权重运行)
   static const Map<SkinMetricType, double> combinationWeights = {
-    SkinMetricType.delicacy: 1.0,
-    SkinMetricType.hydration: 1.0,
-    SkinMetricType.youthfulness: 1.0,
-    SkinMetricType.clarity: 1.0,
+    SkinMetricType.delicacy: 1.08,
+    SkinMetricType.hydration: 1.12,
+    SkinMetricType.youthfulness: 1.12,
+    SkinMetricType.clarity: 1.08,
   };
 
   /// 获取当前模式下主推重点高亮的指标
@@ -87,18 +88,18 @@ class SkinMetricConfig {
   /// 获取三阶段吸收系数 Kphase(t)
   static double getPhaseFactor(int elapsedSeconds) {
     if (elapsedSeconds < 240) {
-      return 1.30; // 0 ~ 4 分钟：快速吸收期
+      return 1.05; // 0 ~ 4 分钟：平稳充盈
     } else if (elapsedSeconds < 540) {
-      return 1.00; // 4 ~ 9 分钟：深层滋养期
+      return 1.00; // 4 ~ 9 分钟：匀速渗透
     } else {
-      return 0.70; // 9 ~ 12 分钟：饱满巩固期
+      return 0.95; // 9 ~ 12 分钟：饱满巩固
     }
   }
 
-  /// 获取档位增益系数 Kgear (1~10档)
+  /// 获取档位增益系数 Kgear (1~10档: 0.96x ~ 1.05x，确保日常1~3档满程依然充盈)
   static double getGearFactor(int currentGear) {
     final clampedGear = currentGear.clamp(1, 10);
-    return 1.0 + (clampedGear - 1) * 0.08;
+    return 0.96 + (clampedGear - 1) * 0.01;
   }
 }
 
@@ -119,12 +120,12 @@ class SkinMetricData {
     this.skinTone = 0.0,
   });
 
-  /// 初始轻度伪随机基线 (0.38 ~ 0.44)
+  /// 初始微读数基线 (统一平滑起点 0.10)
   static const SkinMetricData initialBaseline = SkinMetricData(
-    smoothness: 0.40,
-    hydration: 0.42,
-    youthfulness: 0.38,
-    skinTone: 0.41,
+    smoothness: 0.10,
+    hydration: 0.10,
+    youthfulness: 0.10,
+    skinTone: 0.10,
   );
 
   /// 未开始状态的空柱 (0.0)

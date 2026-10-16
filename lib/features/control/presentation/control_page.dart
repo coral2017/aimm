@@ -5,10 +5,10 @@ import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../report/presentation/analysis_report_page.dart';
 import '../providers/mask_controller.dart';
+import '../../profile/presentation/subpages/saved_modes_page.dart';
 import 'widgets/circular_mode_dial.dart';
 import 'widgets/high_intensity_dialog.dart';
 import 'widgets/intensity_slider.dart';
-import 'widgets/save_mode_dialog.dart';
 import 'widgets/status_metric_card.dart';
 
 class ControlPage extends StatefulWidget {
@@ -146,7 +146,11 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
 
               // Card 2: Center Circular Mode Dial (Beauty Hub) (Figma 0:810 / 18:591)
               CircularModeDial(
-                onSaveTap: () => SaveModeDialog.show(context),
+                onSaveTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SavedModesPage()),
+                  );
+                },
                 onCombinationTap: () {
                   final controller = context.read<MaskController>();
                   if (!controller.isConnected) {

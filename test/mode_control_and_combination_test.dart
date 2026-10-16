@@ -100,8 +100,8 @@ void main() {
       expect(controller.currentGear, 1);
 
       // Sub-mode stages map seamlessly to elapsed time
-      // 0s elapsed -> stage 0: rejuvenating
-      expect(controller.activeUnderlyingMode, MaskModeType.rejuvenating);
+      // 0s elapsed -> stage 0: firming (first mode in values sequence)
+      expect(controller.activeUnderlyingMode, MaskModeType.firming);
 
       // Pause and resume in combination mode also resets gear to 1
       await controller.setGear(6);
@@ -120,10 +120,10 @@ void main() {
       const testDevice = BleDeviceInfo(id: 'TEST-MAC-01', name: 'Mask-Test');
       await controller.connect(testDevice);
 
-      // Construct a report packet indicating MCU is already running at 10m35s, mode=0x07 (firming), gear=10 (BLE gear)
+      // Construct a report packet indicating MCU is already running at 10m35s, mode=0x04 (firming), gear=22 (BLE gear -> UI gear 3)
       const report = BleStatusReport(
-        mode: 0x07,
-        gear: 10,
+        mode: 0x04,
+        gear: 22,
         isOpen: true,
         battery: 95,
         workMinutes: 10,
@@ -136,9 +136,59 @@ void main() {
 
       expect(controller.isRunning, isTrue);
       expect(controller.selectedMode, MaskModeType.firming);
+      expect(controller.currentGear, 3);
       expect(controller.remainingSecondsTotal, 10 * 60 + 35); // 635 seconds preserved
       expect(controller.remainingMinutes, 10);
       expect(controller.remainingSeconds, 35);
+
+      controller.dispose();
+    });
+
+    test('Saved Mode Presets: save, isCurrentSaved check, deduplication, and applyPresetAndStart', () async {
+      final controller = MaskController();
+      const testDevice = BleDeviceInfo(id: 'TEST-MAC-01', name: 'Mask-Test');
+
+      await controller.connect(testDevice);
+
+      expect(controller.isCurrentSaved, false);
+
+      // Select mode and gear
+      controller.setMode(MaskModeType.firming);
+      await controller.togglePower(); // Start running to allow adjusting gear
+      await controller.setGear(3);
+
+      expect(controller.isCurrentSaved, false);
+
+      // Save preset
+      await controller.savePreset(mode: MaskModeType.firming, gear: 3);
+      expect(controller.savedPresets.length, 1);
+      expect(controller.isCurrentSaved, true);
+
+      // Deduplication: saving same mode and gear should not duplicate
+      await controller.savePreset(mode: MaskModeType.firming, gear: 3);
+      expect(controller.savedPresets.length, 1);
+
+      // Adjust gear to 4 -> isCurrentSaved becomes false
+      await controller.setGear(4);
+      expect(controller.isCurrentSaved, false);
+
+      // Save another preset for lifting gear 5
+      await controller.savePreset(mode: MaskModeType.lifting, gear: 5);
+      expect(controller.savedPresets.length, 2);
+
+      // Apply first preset (firming gear 3) -> should set mode, gear 3, and ensure power is on
+      final firstPreset = controller.savedPresets.firstWhere((p) => p.mode == MaskModeType.firming);
+      await controller.applyPresetAndStart(firstPreset);
+
+      expect(controller.selectedMode, MaskModeType.firming);
+      expect(controller.currentGear, 3);
+      expect(controller.isPowerOn, true);
+      expect(controller.isCurrentSaved, true);
+
+      // Delete preset
+      await controller.deletePreset(firstPreset.id);
+      expect(controller.savedPresets.length, 1);
+      expect(controller.isCurrentSaved, false);
 
       controller.dispose();
     });

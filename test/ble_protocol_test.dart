@@ -54,6 +54,16 @@ void main() {
       expect(packet[19], equals(0xFF));
     });
 
+    test('buildControlPacket preserves high gear values without 16 clamping', () {
+      final packet = BleProtocol.buildControlPacket(
+        mode: 0x07, // Rejuvenating
+        gear: 53, // Gear 10 communication value = 53 (0x35)
+        isOpen: true,
+      );
+      expect(packet[7], equals(53));
+      expect(packet[7], equals(0x35));
+    });
+
     test('parseStatusPacket parses MCU 0xA4 report correctly', () {
       // Create a mock MCU A4 status packet
       final packet = Uint8List(20);
@@ -91,47 +101,56 @@ void main() {
     });
 
     test('MaskModeType firmware values and gear mappings', () {
-      // 焕肤: 0x04, 6~15
-      expect(MaskModeType.rejuvenating.firmwareValue, equals(0x04));
-      expect(MaskModeType.rejuvenating.startGear, equals(6));
-      expect(MaskModeType.rejuvenating.endGear, equals(15));
-      expect(MaskModeType.rejuvenating.getBleGear(1), equals(6));
-      expect(MaskModeType.rejuvenating.getBleGear(10), equals(15));
+      // 紧致: 0x04, 13~53
+      expect(MaskModeType.firming.firmwareValue, equals(0x04));
+      expect(MaskModeType.firming.startGear, equals(13));
+      expect(MaskModeType.firming.endGear, equals(53));
+      expect(MaskModeType.firming.getBleGear(1), equals(13));
+      expect(MaskModeType.firming.getBleGear(2), equals(17));
+      expect(MaskModeType.firming.getBleGear(5), equals(33));
+      expect(MaskModeType.firming.getBleGear(10), equals(53));
+      expect(MaskModeType.firming.getUiGearFromBle(13), equals(1));
+      expect(MaskModeType.firming.getUiGearFromBle(17), equals(2));
+      expect(MaskModeType.firming.getUiGearFromBle(53), equals(10));
 
-      // 增加弹性: 0x05, 7~16
+      // 澎弹: 0x05, 13~53
       expect(MaskModeType.plumping.firmwareValue, equals(0x05));
-      expect(MaskModeType.plumping.startGear, equals(7));
-      expect(MaskModeType.plumping.endGear, equals(16));
-      expect(MaskModeType.plumping.getBleGear(1), equals(7));
-      expect(MaskModeType.plumping.getBleGear(10), equals(16));
+      expect(MaskModeType.plumping.startGear, equals(13));
+      expect(MaskModeType.plumping.endGear, equals(53));
+      expect(MaskModeType.plumping.getBleGear(1), equals(13));
+      expect(MaskModeType.plumping.getBleGear(10), equals(53));
 
-      // 紧致: 0x07, 7~16
-      expect(MaskModeType.firming.firmwareValue, equals(0x07));
-      expect(MaskModeType.firming.startGear, equals(7));
-      expect(MaskModeType.firming.endGear, equals(16));
-      expect(MaskModeType.firming.getBleGear(1), equals(7));
-      expect(MaskModeType.firming.getBleGear(10), equals(16));
+      // 焕活: 0x07, 13~53
+      expect(MaskModeType.rejuvenating.firmwareValue, equals(0x07));
+      expect(MaskModeType.rejuvenating.startGear, equals(13));
+      expect(MaskModeType.rejuvenating.endGear, equals(53));
+      expect(MaskModeType.rejuvenating.getBleGear(1), equals(13));
+      expect(MaskModeType.rejuvenating.getBleGear(10), equals(53));
 
-      // 密集修护: 0x08, 3~12
+      // 瞬透: 0x08, 10~52 (2档为 14)
       expect(MaskModeType.intensiveCare.firmwareValue, equals(0x08));
-      expect(MaskModeType.intensiveCare.startGear, equals(3));
-      expect(MaskModeType.intensiveCare.endGear, equals(12));
-      expect(MaskModeType.intensiveCare.getBleGear(1), equals(3));
-      expect(MaskModeType.intensiveCare.getBleGear(10), equals(12));
+      expect(MaskModeType.intensiveCare.startGear, equals(10));
+      expect(MaskModeType.intensiveCare.endGear, equals(52));
+      expect(MaskModeType.intensiveCare.getBleGear(1), equals(10));
+      expect(MaskModeType.intensiveCare.getBleGear(2), equals(14));
+      expect(MaskModeType.intensiveCare.getBleGear(10), equals(52));
+      expect(MaskModeType.intensiveCare.getUiGearFromBle(14), equals(2));
 
-      // 赋活: 0x09, 2~11
-      expect(MaskModeType.revitalizing.firmwareValue, equals(0x09));
-      expect(MaskModeType.revitalizing.startGear, equals(2));
-      expect(MaskModeType.revitalizing.endGear, equals(11));
-      expect(MaskModeType.revitalizing.getBleGear(1), equals(2));
-      expect(MaskModeType.revitalizing.getBleGear(10), equals(11));
+      // 提拉: 0x09, 10~52 (2档为 15)
+      expect(MaskModeType.lifting.firmwareValue, equals(0x09));
+      expect(MaskModeType.lifting.startGear, equals(10));
+      expect(MaskModeType.lifting.endGear, equals(52));
+      expect(MaskModeType.lifting.getBleGear(1), equals(10));
+      expect(MaskModeType.lifting.getBleGear(2), equals(15));
+      expect(MaskModeType.lifting.getBleGear(10), equals(52));
 
-      // 拉提: 0x0B, 4~13
-      expect(MaskModeType.lifting.firmwareValue, equals(0x0B));
-      expect(MaskModeType.lifting.startGear, equals(4));
-      expect(MaskModeType.lifting.endGear, equals(13));
-      expect(MaskModeType.lifting.getBleGear(1), equals(4));
-      expect(MaskModeType.lifting.getBleGear(10), equals(13));
+      // 活肌: 0x0B, 10~52 (2档为 15)
+      expect(MaskModeType.revitalizing.firmwareValue, equals(0x0B));
+      expect(MaskModeType.revitalizing.startGear, equals(10));
+      expect(MaskModeType.revitalizing.endGear, equals(52));
+      expect(MaskModeType.revitalizing.getBleGear(1), equals(10));
+      expect(MaskModeType.revitalizing.getBleGear(2), equals(15));
+      expect(MaskModeType.revitalizing.getBleGear(10), equals(52));
     });
   });
 }

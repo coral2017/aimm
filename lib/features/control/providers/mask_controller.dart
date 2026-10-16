@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/ble/ble_device_info.dart';
 import '../../../core/ble/ble_manager.dart';
 import '../../../core/ble/ble_protocol.dart';
 import '../../../core/ble/ble_service_interface.dart';
 import '../../../core/storage/device_storage_service.dart';
+import '../../../core/storage/report_storage_service.dart';
+import '../../report/models/skincare_report_model.dart';
 import '../models/mask_mode.dart';
 
 class SavedModePreset {
@@ -22,6 +26,27 @@ class SavedModePreset {
     required this.gear,
     required this.createdAt,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'modeId': mode.id,
+      'gear': gear,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory SavedModePreset.fromMap(Map<String, dynamic> map) {
+    final modeId = map['modeId'] as int? ?? 0;
+    return SavedModePreset(
+      id: map['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      name: map['name'] as String? ?? '',
+      mode: MaskModeType.fromId(modeId),
+      gear: (map['gear'] as num?)?.toInt() ?? 1,
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+    );
+  }
 }
 
 class MaskController extends ChangeNotifier {
@@ -66,27 +91,26 @@ class MaskController extends ChangeNotifier {
   List<MaskModeType> _combinationSequence = List<MaskModeType>.from(MaskModeType.values);
   int _combinationCurrentStage = 0;
 
-  final List<SavedModePreset> _savedPresets = [
-    SavedModePreset(
-      id: '1',
-      name: 'Night Repair Ritual',
-      mode: MaskModeType.rejuvenating,
-      gear: 3,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    SavedModePreset(
-      id: '2',
-      name: 'Morning Firming & Glow',
-      mode: MaskModeType.firming,
-      gear: 5,
-      createdAt: DateTime.now().subtract(const Duration(days: 3)),
-    ),
-  ];
+  // Skincare Treatment Session Lifecycle
+  DateTime? _sessionStartTime;
+  DateTime? _sessionLastPausedTime;
+  int _sessionAccumulatedSeconds = 0;
+  int _sessionMaxGear = 1;
+  int _sessionGearSum = 0;
+  int _sessionGearCount = 0;
+  SkincareReportModel? _latestReport;
+
+  SkincareReportModel? get latestReport => _latestReport;
+  @visibleForTesting
+  int get sessionAccumulatedSeconds => _sessionAccumulatedSeconds;
+
+  final List<SavedModePreset> _savedPresets = [];
 
   MaskController() {
     _initBleListeners();
     _startHeartbeatWatchdog();
     _loadBoundDeviceAndAutoConnect();
+    _loadSavedPresets();
   }
 
   // Getters
@@ -123,7 +147,14 @@ class MaskController extends ChangeNotifier {
   int get remainingSeconds => _remainingSecondsTotal % 60;
   SkinMetricData get skinMetrics => isConnected ? _skinMetrics : SkinMetricData.empty;
   Locale get currentLocale => _currentLocale;
+  int get maxGearLimit => maxGear;
   List<SavedModePreset> get savedPresets => List.unmodifiable(_savedPresets);
+
+  /// Checks if current mode & gear have already been saved
+  bool get isCurrentSaved {
+    if (_selectedMode == null) return false;
+    return _savedPresets.any((p) => p.mode == _selectedMode && p.gear == _currentGear);
+  }
   bool get hasAcknowledgedHighIntensity => _hasAcknowledgedHighIntensity;
   bool get isCombinationActive => _isCombinationActive;
   int get combinationCurrentStage => _combinationCurrentStage;
@@ -385,6 +416,7 @@ class MaskController extends ChangeNotifier {
       // Transition from Running -> Paused
       _isPowerOn = false;
       _lastPauseRequestTime = DateTime.now();
+      _sessionLastPausedTime = DateTime.now();
       _stopCountdown();
     } else {
       // Transition from Paused/Stopped -> Running
@@ -400,6 +432,7 @@ class MaskController extends ChangeNotifier {
       }
       _isPowerOn = true;
       _lastStartRequestTime = DateTime.now();
+      _startOrResumeSession();
       _startCountdown();
     }
 
@@ -426,6 +459,10 @@ class MaskController extends ChangeNotifier {
 
       if (_remainingSecondsTotal > 0) {
         _remainingSecondsTotal--;
+        _sessionAccumulatedSeconds++;
+        _sessionMaxGear = max(_sessionMaxGear, _currentGear);
+        _sessionGearSum += _currentGear;
+        _sessionGearCount++;
 
         // Calculate dynamic skin metrics filling per second (Tick = 1s)
         final elapsedSeconds = totalTreatmentSeconds - _remainingSecondsTotal;
@@ -433,20 +470,31 @@ class MaskController extends ChangeNotifier {
         final gearFactor = SkinMetricConfig.getGearFactor(_currentGear);
         const vBase = SkinMetricConfig.vBase;
 
-        final weights = _isCombinationActive
-            ? SkinMetricConfig.combinationWeights
-            : (SkinMetricConfig.modeWeights[activeUnderlyingMode] ?? SkinMetricConfig.combinationWeights);
+        // In both single and combination mode, dynamically follow activeUnderlyingMode's distinct weights!
+        final weights = SkinMetricConfig.modeWeights[activeUnderlyingMode] ?? SkinMetricConfig.combinationWeights;
 
         final deltaDelicacy = vBase * (weights[SkinMetricType.delicacy] ?? 1.0) * phaseFactor * gearFactor;
         final deltaHydration = vBase * (weights[SkinMetricType.hydration] ?? 1.0) * phaseFactor * gearFactor;
         final deltaYouthfulness = vBase * (weights[SkinMetricType.youthfulness] ?? 1.0) * phaseFactor * gearFactor;
         final deltaClarity = vBase * (weights[SkinMetricType.clarity] ?? 1.0) * phaseFactor * gearFactor;
 
+        var newSmoothness = _skinMetrics.smoothness + deltaDelicacy;
+        var newHydration = _skinMetrics.hydration + deltaHydration;
+        var newYouthfulness = _skinMetrics.youthfulness + deltaYouthfulness;
+        var newSkinTone = _skinMetrics.skinTone + deltaClarity;
+
+        // 动态硬底保护：最大与最小指标间距控制在 15% (0.15) 以内
+        final maxVal = max(
+          max(newSmoothness, newHydration),
+          max(newYouthfulness, newSkinTone),
+        );
+        final minFloor = maxVal - 0.15;
+
         _skinMetrics = _skinMetrics.copyWith(
-          smoothness: (_skinMetrics.smoothness + deltaDelicacy).clamp(0.0, 0.95),
-          hydration: (_skinMetrics.hydration + deltaHydration).clamp(0.0, 0.95),
-          youthfulness: (_skinMetrics.youthfulness + deltaYouthfulness).clamp(0.0, 0.95),
-          skinTone: (_skinMetrics.skinTone + deltaClarity).clamp(0.0, 0.95),
+          smoothness: max(newSmoothness, minFloor).clamp(0.0, 0.98),
+          hydration: max(newHydration, minFloor).clamp(0.0, 0.98),
+          youthfulness: max(newYouthfulness, minFloor).clamp(0.0, 0.98),
+          skinTone: max(newSkinTone, minFloor).clamp(0.0, 0.98),
         );
 
         // If in combination mode, check if we need to advance to next 2-minute stage
@@ -471,6 +519,12 @@ class MaskController extends ChangeNotifier {
         _stopCountdown();
         _remainingSecondsTotal = totalTreatmentSeconds; // Reset to 12:00 for next session
         _globalAlertController.add('treatmentCompleteAlert');
+        unawaited(_finalizeAndSaveSession(isCompleted: true));
+
+        // 【重置皮肤指标水柱与模式选中态】
+        _skinMetrics = SkinMetricData.empty;
+        _selectedMode = null;
+        _currentGear = 1;
         notifyListeners();
 
         final underlying = activeUnderlyingMode;
@@ -576,6 +630,7 @@ class MaskController extends ChangeNotifier {
   /// Unbind / Disconnect from current device
   Future<void> unbindCurrentDevice() async {
     debugPrint('👉 [App UI 操作] 解绑/断开设备');
+    await _finalizeAndSaveSession(isCompleted: false);
     stopAutoReconnect();
     _isPowerOn = false;
     _isCombinationActive = false;
@@ -601,28 +656,174 @@ class MaskController extends ChangeNotifier {
     await unbindCurrentDevice();
   }
 
-  void saveCurrentPreset(String name) {
-    final newPreset = SavedModePreset(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name.isNotEmpty ? name : 'Custom Preset ${_savedPresets.length + 1}',
-      mode: currentMode,
-      gear: _currentGear,
-      createdAt: DateTime.now(),
-    );
-    _savedPresets.insert(0, newPreset);
-    notifyListeners();
+  Future<void> saveCurrentPreset(String name) async {
+    final mode = _selectedMode ?? currentMode;
+    await savePreset(mode: mode, gear: _currentGear, customName: name);
   }
 
-  void applyPreset(SavedModePreset preset) {
+  Future<void> savePreset({required MaskModeType mode, required int gear, String? customName}) async {
+    final clampedGear = gear.clamp(1, maxGear);
+    final existingIndex = _savedPresets.indexWhere((p) => p.mode == mode && p.gear == clampedGear);
+    if (existingIndex >= 0) {
+      debugPrint('ℹ️ [预设保存] 该模式与档位已存在于保存列表中 (mode: ${mode.name}, gear: $clampedGear)');
+      return;
+    }
+
+    final displayName = customName?.trim().isNotEmpty == true
+        ? customName!.trim()
+        : '${mode.l10nKey} · L$clampedGear';
+
+    final newPreset = SavedModePreset(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: displayName,
+      mode: mode,
+      gear: clampedGear,
+      createdAt: DateTime.now(),
+    );
+
+    _savedPresets.insert(0, newPreset);
+    notifyListeners();
+    await _persistSavedPresets();
+    debugPrint('💾 [预设保存] 成功保存预设: ${newPreset.name} (共 ${_savedPresets.length} 项)');
+  }
+
+  Future<void> applyPresetAndStart(SavedModePreset preset) async {
+    debugPrint('🚀 [应用并运行预设] 模式: ${preset.mode.name}, 档位: ${preset.gear}');
     setMode(preset.mode);
     _currentGear = preset.gear;
     notifyListeners();
+
+    if (isConnected) {
+      if (!_isPowerOn) {
+        await togglePower();
+        await setGear(preset.gear);
+      } else {
+        await setGear(preset.gear);
+      }
+    }
   }
 
-  void deletePreset(String id) {
+  void applyPreset(SavedModePreset preset) {
+    applyPresetAndStart(preset);
+  }
+
+  Future<void> deletePreset(String id) async {
     _savedPresets.removeWhere((p) => p.id == id);
     notifyListeners();
+    await _persistSavedPresets();
   }
+
+  Future<void> _persistSavedPresets() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final listJson = jsonEncode(_savedPresets.map((p) => p.toMap()).toList());
+      await prefs.setString('aimm_saved_mode_presets', listJson);
+    } catch (_) {}
+  }
+
+  Future<void> _loadSavedPresets() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final listJson = prefs.getString('aimm_saved_mode_presets');
+      if (listJson != null && listJson.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(listJson) as List<dynamic>;
+        _savedPresets.clear();
+        for (final item in decoded) {
+          _savedPresets.add(SavedModePreset.fromMap(item as Map<String, dynamic>));
+        }
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  void _startOrResumeSession() {
+    final now = DateTime.now();
+    if (_sessionStartTime != null && _sessionLastPausedTime != null) {
+      final pauseGapMinutes = now.difference(_sessionLastPausedTime!).inMinutes;
+      if (pauseGapMinutes < 5) {
+        debugPrint('🔄 [护肤会话接续] 在5分钟接续窗口内（已暂停${now.difference(_sessionLastPausedTime!).inSeconds}秒），继续累加有效时长 (已累计: $_sessionAccumulatedSeconds 秒)');
+        _sessionLastPausedTime = null;
+        return;
+      } else {
+        // Gap >= 5 minutes: previous session timed out, finalize it
+        _finalizeAndSaveSession(isCompleted: false);
+      }
+    }
+
+    // Start fresh session
+    _sessionStartTime = now;
+    _sessionAccumulatedSeconds = 0;
+    _sessionMaxGear = _currentGear;
+    _sessionGearSum = _currentGear;
+    _sessionGearCount = 1;
+    _sessionLastPausedTime = null;
+    debugPrint('✨ [新护肤会话开启] 记录开始时间: $_sessionStartTime, 模式: ${activeUnderlyingMode.name}, 起始档位: $_currentGear');
+  }
+
+  Future<void> _finalizeAndSaveSession({required bool isCompleted}) async {
+    if (_sessionStartTime == null || _sessionAccumulatedSeconds < 60) {
+      if (_sessionStartTime != null && _sessionAccumulatedSeconds < 60) {
+        debugPrint('⚠️ [护肤会话丢弃] 有效运行时间过短 ($_sessionAccumulatedSeconds 秒 < 60秒)，视为误触丢弃');
+      }
+      _resetSession();
+      return;
+    }
+
+    final avgGear = _sessionGearCount > 0
+        ? (_sessionGearSum / _sessionGearCount)
+        : _currentGear.toDouble();
+    final score = SkincareReportModel.calculateScore(
+      smoothness: _skinMetrics.smoothness,
+      hydration: _skinMetrics.hydration,
+      youthfulness: _skinMetrics.youthfulness,
+      skinTone: _skinMetrics.skinTone,
+    );
+
+    final modeKey = _isCombinationActive ? 'combination' : activeUnderlyingMode.name;
+    final modeName = _isCombinationActive ? '综合模式' : activeUnderlyingMode.l10nKey;
+
+    final report = SkincareReportModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      startTime: _sessionStartTime!,
+      endTime: DateTime.now(),
+      actualDurationSeconds: _sessionAccumulatedSeconds,
+      modeKey: modeKey,
+      modeName: modeName,
+      maxGear: _sessionMaxGear,
+      avgGear: double.parse(avgGear.toStringAsFixed(1)),
+      smoothness: _skinMetrics.smoothness,
+      hydration: _skinMetrics.hydration,
+      youthfulness: _skinMetrics.youthfulness,
+      skinTone: _skinMetrics.skinTone,
+      score: score,
+      isCompleted: isCompleted,
+    );
+
+    _latestReport = report;
+    await ReportStorageService.instance.saveReport(report);
+    debugPrint('📊 [护肤报告归档] 成功生成并持久化护肤记录: ${report.formattedDuration}, 得分: ${report.score}, 模式: ${report.modeKey}, 完整完成: $isCompleted');
+    _resetSession();
+  }
+
+  void _resetSession() {
+    _sessionStartTime = null;
+    _sessionLastPausedTime = null;
+    _sessionAccumulatedSeconds = 0;
+    _sessionMaxGear = 1;
+    _sessionGearSum = 0;
+    _sessionGearCount = 0;
+  }
+
+  @visibleForTesting
+  Future<void> finalizeAndSaveSessionForTesting({required bool isCompleted}) =>
+      _finalizeAndSaveSession(isCompleted: isCompleted);
+
+  @visibleForTesting
+  void simulateSessionSecondsForTesting(int seconds) {
+    _sessionAccumulatedSeconds += seconds;
+  }
+
+
 
   @override
   void dispose() {

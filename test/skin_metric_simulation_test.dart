@@ -12,18 +12,19 @@ void main() {
 
   group('SkinMetricConfig Tests', () {
     test('Three phase absorption factors match specification', () {
-      expect(SkinMetricConfig.getPhaseFactor(0), 1.30);
-      expect(SkinMetricConfig.getPhaseFactor(239), 1.30);
+      expect(SkinMetricConfig.getPhaseFactor(0), 1.05);
+      expect(SkinMetricConfig.getPhaseFactor(239), 1.05);
       expect(SkinMetricConfig.getPhaseFactor(240), 1.00);
       expect(SkinMetricConfig.getPhaseFactor(539), 1.00);
-      expect(SkinMetricConfig.getPhaseFactor(540), 0.70);
-      expect(SkinMetricConfig.getPhaseFactor(720), 0.70);
+      expect(SkinMetricConfig.getPhaseFactor(540), 0.95);
+      expect(SkinMetricConfig.getPhaseFactor(720), 0.95);
     });
 
     test('Gear factor calculation', () {
-      expect(SkinMetricConfig.getGearFactor(1), 1.0);
-      expect(SkinMetricConfig.getGearFactor(2), 1.08);
-      expect(SkinMetricConfig.getGearFactor(5), 1.32);
+      expect(SkinMetricConfig.getGearFactor(1), 0.96);
+      expect(SkinMetricConfig.getGearFactor(2), closeTo(0.97, 0.001));
+      expect(SkinMetricConfig.getGearFactor(5), closeTo(1.00, 0.001));
+      expect(SkinMetricConfig.getGearFactor(10), closeTo(1.05, 0.001));
     });
 
     test('Mode highlight linking', () {
@@ -101,8 +102,8 @@ void main() {
       controller.dispose();
     });
 
-    test('12-minute theoretical simulation achieves 0.88 - 0.95 range', () {
-      // Simulate 720 ticks mathematically
+    test('12-minute theoretical simulation achieves ~95% max, ~80% min, and gap <= 15%', () {
+      // Simulate 720 ticks mathematically at default gear 5 (1.00 factor)
       var delicacy = SkinMetricData.initialBaseline.delicacy;
       var hydration = SkinMetricData.initialBaseline.hydration;
       var youthfulness = SkinMetricData.initialBaseline.youthfulness;
@@ -110,9 +111,20 @@ void main() {
 
       final weights = SkinMetricConfig.modeWeights[MaskModeType.revitalizing]!;
       const vBase = SkinMetricConfig.vBase;
-      const gearFactor = 1.0; // 1 gear
+      final gearFactor = SkinMetricConfig.getGearFactor(5); // 1.00
 
-      for (int t = 0; t < 720; t++) {
+      // At 9 minutes (remaining 3 mins = 540s), verify it has not hit ceiling (< 0.80)
+      for (int t = 0; t < 540; t++) {
+        final phase = SkinMetricConfig.getPhaseFactor(t);
+        delicacy += vBase * weights[SkinMetricType.delicacy]! * phase * gearFactor;
+        hydration += vBase * weights[SkinMetricType.hydration]! * phase * gearFactor;
+        youthfulness += vBase * weights[SkinMetricType.youthfulness]! * phase * gearFactor;
+        clarity += vBase * weights[SkinMetricType.clarity]! * phase * gearFactor;
+      }
+      expect(hydration, lessThan(0.80), reason: 'At remaining 3 mins, hydration must not saturate');
+
+      // Continue to full 12 minutes (720s)
+      for (int t = 540; t < 720; t++) {
         final phase = SkinMetricConfig.getPhaseFactor(t);
         delicacy += vBase * weights[SkinMetricType.delicacy]! * phase * gearFactor;
         hydration += vBase * weights[SkinMetricType.hydration]! * phase * gearFactor;
@@ -120,13 +132,22 @@ void main() {
         clarity += vBase * weights[SkinMetricType.clarity]! * phase * gearFactor;
       }
 
-      // Check that hydration (main target in revitalizing mode) grew significantly and capped properly
+      // Check primary metric (hydration) finishes around ~95% (0.93 - 0.96)
+      expect(hydration, inInclusiveRange(0.93, 0.96));
+
+      // Check min metric (youthfulness / clarity) finishes around ~80% (0.78 - 0.82)
+      expect(youthfulness, inInclusiveRange(0.78, 0.82));
+      expect(clarity, inInclusiveRange(0.78, 0.82));
+
+      // Check distinct weight hierarchy
       expect(hydration, greaterThan(delicacy));
-      expect(hydration, greaterThan(youthfulness));
-      expect(hydration, greaterThanOrEqualTo(0.88));
-      expect(delicacy, greaterThanOrEqualTo(0.65));
-      expect(youthfulness, greaterThanOrEqualTo(0.50));
-      expect(clarity, greaterThanOrEqualTo(0.50));
+      expect(delicacy, greaterThan(youthfulness));
+      expect(delicacy, inInclusiveRange(0.86, 0.90));
+
+      // Check max difference is strictly within 15% (0.15)
+      final maxVal = [delicacy, hydration, youthfulness, clarity].reduce((a, b) => a > b ? a : b);
+      final minVal = [delicacy, hydration, youthfulness, clarity].reduce((a, b) => a < b ? a : b);
+      expect(maxVal - minVal, lessThanOrEqualTo(0.155));
     });
   });
 }
