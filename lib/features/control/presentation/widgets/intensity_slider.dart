@@ -4,7 +4,7 @@ import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../providers/mask_controller.dart';
 
-class IntensitySlider extends StatelessWidget {
+class IntensitySlider extends StatefulWidget {
   final Function(int targetGear) onHighIntensityRequested;
   final VoidCallback onBlockedTap;
 
@@ -15,11 +15,18 @@ class IntensitySlider extends StatelessWidget {
   });
 
   @override
+  State<IntensitySlider> createState() => _IntensitySliderState();
+}
+
+class _IntensitySliderState extends State<IntensitySlider> {
+  int? _draggingGear;
+
+  @override
   Widget build(BuildContext context) {
     final controller = context.watch<MaskController>();
     final isConnected = controller.isConnected;
     final isRunning = controller.isRunning;
-    final currentGear = controller.currentGear;
+    final currentGear = _draggingGear ?? controller.currentGear;
 
     final String gearDisplay = isConnected ? currentGear.toString().padLeft(2, '0') : '--';
 
@@ -74,11 +81,15 @@ class IntensitySlider extends StatelessWidget {
                 isEnabled: isConnected,
                 onTap: () {
                   if (!isRunning) {
-                    onBlockedTap();
+                    widget.onBlockedTap();
                     return;
                   }
-                  if (currentGear > 1) {
-                    controller.setGear(currentGear - 1);
+                  final actualGear = controller.currentGear;
+                  if (actualGear > 1) {
+                    setState(() {
+                      _draggingGear = null;
+                    });
+                    controller.setGear(actualGear - 1);
                   }
                 },
               ),
@@ -104,12 +115,29 @@ class IntensitySlider extends StatelessWidget {
                       onChanged: isConnected
                           ? (value) {
                               if (!isRunning) {
-                                onBlockedTap();
+                                widget.onBlockedTap();
+                                return;
+                              }
+                              // 滑动过程中仅刷新 UI，不向蓝牙发送高频指令
+                              setState(() {
+                                _draggingGear = value.round();
+                              });
+                            }
+                          : null,
+                      onChangeEnd: isConnected
+                          ? (value) {
+                              if (!isRunning) {
+                                setState(() {
+                                  _draggingGear = null;
+                                });
                                 return;
                               }
                               final newGear = value.round();
-                              if (newGear > currentGear && newGear >= 8) {
-                                onHighIntensityRequested(newGear);
+                              setState(() {
+                                _draggingGear = null;
+                              });
+                              if (newGear > controller.currentGear && newGear >= 8) {
+                                widget.onHighIntensityRequested(newGear);
                               } else {
                                 controller.setGear(newGear);
                               }
@@ -126,13 +154,17 @@ class IntensitySlider extends StatelessWidget {
                 isEnabled: isConnected,
                 onTap: () {
                   if (!isRunning) {
-                    onBlockedTap();
+                    widget.onBlockedTap();
                     return;
                   }
-                  if (currentGear < 10) {
-                    final nextGear = currentGear + 1;
+                  final actualGear = controller.currentGear;
+                  if (actualGear < 10) {
+                    final nextGear = actualGear + 1;
+                    setState(() {
+                      _draggingGear = null;
+                    });
                     if (nextGear >= 8) {
-                      onHighIntensityRequested(nextGear);
+                      widget.onHighIntensityRequested(nextGear);
                     } else {
                       controller.setGear(nextGear);
                     }

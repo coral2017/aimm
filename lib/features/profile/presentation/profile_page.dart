@@ -6,6 +6,7 @@ import '../../connection/presentation/device_connection_dialog.dart';
 import '../../control/providers/mask_controller.dart';
 import 'subpages/history_report_page.dart';
 import 'subpages/saved_modes_page.dart';
+import 'widgets/ble_tx_log_dialog.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -66,13 +67,20 @@ class ProfilePage extends StatelessWidget {
                   onTap: () => _showSettingsBottomSheet(context),
                 ),
 
+                // _buildMenuItem(
+                //   context: context,
+                //   icon: Icons.receipt_long_rounded,
+                //   title: context.tr('bleTxLog'),
+                //   onTap: () => BleTxLogDialog.show(context),
+                // ),
+
                 _buildMenuItem(
                   context: context,
                   icon: Icons.help_outline_rounded,
                   title: context.tr('helpCenter'),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('AI-Smart Mask V2 Manual & FAQ v1.0.7')),
+                      const SnackBar(content: Text('AI-Smart Mask V2 Manual & FAQ v1.0.9')),
                     );
                   },
                 ),

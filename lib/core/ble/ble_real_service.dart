@@ -252,14 +252,14 @@ class BleRealService implements IBleService {
       return false;
     }
     try {
-      await _writeCharacteristic!.write(packet, withoutResponse: false);
-      debugPrint('   └─✅ 发送成功 (模式: WriteWithResponse)');
+      await _writeCharacteristic!.write(packet, withoutResponse: true);
+      debugPrint('   └─✅ 发送成功 (模式: WriteWithoutResponse / 0x52)');
       return true;
     } catch (e) {
-      debugPrint('   └─⚠️ WriteWithResponse 失败 ($e)，正在尝试 WithoutResponse 模式重发...');
+      debugPrint('   └─⚠️ WriteWithoutResponse 失败 ($e)，正在尝试 WithResponse 模式重发...');
       try {
-        await _writeCharacteristic!.write(packet, withoutResponse: true);
-        debugPrint('   └─✅ 发送成功 (模式: WriteWithoutResponse)');
+        await _writeCharacteristic!.write(packet, withoutResponse: false);
+        debugPrint('   └─✅ 发送成功 (模式: WriteWithResponse)');
         return true;
       } catch (e2) {
         debugPrint('   └─❌ 两次写入尝试均失败: $e2');

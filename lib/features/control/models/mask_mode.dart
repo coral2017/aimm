@@ -68,23 +68,25 @@ enum MaskModeType {
   int get startGear => bleGears.first;
   int get endGear => bleGears.last;
 
-  /// 根据 App UI 的 1~10 档，计算下发给固件的通信档位
+  /// 根据 App UI 的 1~10 档，计算下发给固件的通信档位（支持全局档位偏置微调）
   int getBleGear(int uiGear) {
     final clamped = uiGear.clamp(1, bleGears.length);
-    return bleGears[clamped - 1];
+    final rawValue = bleGears[clamped - 1];
+    return (rawValue + IntensityConfig.globalOffset).clamp(1, 255);
   }
 
-  /// 从固件上报的通信档位反推 App UI 的 1~10 档
+  /// 从固件上报的通信档位反推 App UI 的 1~10 档（支持全局档位偏置微调）
   int getUiGearFromBle(int bleGear) {
-    final index = bleGears.indexOf(bleGear);
+    final targetValue = bleGear - IntensityConfig.globalOffset;
+    final index = bleGears.indexOf(targetValue);
     if (index != -1) {
       return index + 1;
     }
     // 最近邻匹配保护
     int closestIndex = 0;
-    int minDiff = (bleGears[0] - bleGear).abs();
+    int minDiff = (bleGears[0] - targetValue).abs();
     for (int i = 1; i < bleGears.length; i++) {
-      final diff = (bleGears[i] - bleGear).abs();
+      final diff = (bleGears[i] - targetValue).abs();
       if (diff < minDiff) {
         minDiff = diff;
         closestIndex = i;
@@ -106,4 +108,16 @@ enum MaskModeType {
       orElse: () => MaskModeType.firming,
     );
   }
+}
+
+/// EMS 微电流体感与平滑缓升配置
+class IntensityConfig {
+  /// 全局硬件档位偏移量 (默认为 0 与小程序完全一致；如需衰减可随时配置 -1, -2 或 -3)
+  static int globalOffset = 0;
+
+  /// 是否启用平滑缓升 (对齐小程序纯净单包，默认关闭)
+  static bool enableSoftRamp = false;
+
+  /// 平滑缓升步进发送间隔 (毫秒)
+  static const int rampStepIntervalMs = 60;
 }

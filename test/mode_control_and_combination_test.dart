@@ -192,5 +192,46 @@ void main() {
 
       controller.dispose();
     });
+
+    test('Direct discrete single packet dispatch matching WeChat Mini Program', () async {
+      final controller = MaskController();
+      const testDevice = BleDeviceInfo(id: 'TEST-MAC-01', name: 'Mask-Test');
+      await controller.connect(testDevice);
+
+      controller.setMode(MaskModeType.firming); // Start gear is 13
+      await controller.togglePower(); // Starts at gear 13
+      expect(controller.currentGear, 1);
+      expect(controller.dispatchedBleGear, 13);
+
+      // Transition to gear 3 (Firming UI gear 3 -> BLE gear 22)
+      // Dispatches discrete target 22 directly in a single packet matching Mini Program
+      await controller.setGear(3);
+      expect(controller.currentGear, 3);
+      expect(controller.dispatchedBleGear, 22);
+
+      controller.dispose();
+    });
+
+    test('Global intensity offset attenuation adjustment', () {
+      try {
+        IntensityConfig.globalOffset = 0;
+        // Firming base gears: [13, 17, 22, 28, 33, 37, 41, 45, 49, 53]
+        expect(MaskModeType.firming.getBleGear(1), 13);
+        expect(MaskModeType.firming.getBleGear(2), 17);
+        expect(MaskModeType.firming.getBleGear(3), 22);
+
+        // Attenuate globally by -2 steps
+        IntensityConfig.globalOffset = -2;
+        expect(MaskModeType.firming.getBleGear(1), 11);
+        expect(MaskModeType.firming.getBleGear(2), 15);
+        expect(MaskModeType.firming.getBleGear(3), 20);
+
+        // Reverse lookup clamp protection
+        expect(MaskModeType.firming.getUiGearFromBle(11), 1);
+      } finally {
+        IntensityConfig.globalOffset = 0; // Restore default
+      }
+    });
   });
 }
+

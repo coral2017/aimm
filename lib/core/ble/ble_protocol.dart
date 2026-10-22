@@ -76,8 +76,8 @@ class BleProtocol {
     packet[15] = 0x00;
     packet[16] = 0x00;
 
-    // CRC Checksum (1 byte)
-    packet[17] = calculateCrc(packet);
+    // Frame Check / Byte 17: Aligned with WeChat Mini Program and protocol example (0x1E)
+    packet[17] = 0x1E;
 
     // Frame Trailer (2 bytes)
     packet[18] = trailerByte1;

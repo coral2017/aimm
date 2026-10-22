@@ -78,6 +78,12 @@ class MaskController extends ChangeNotifier {
   bool _isPowerOn = false; // Default initial state is Stopped
   int _batteryPercent = 80;
 
+  // Current Dispatched BLE Hardware Gear
+  int? _dispatchedBleGear;
+
+  @visibleForTesting
+  int? get dispatchedBleGear => _dispatchedBleGear;
+
   // 12 Minutes Treatment Timer (720 seconds total)
   static const int totalTreatmentSeconds = 12 * 60;
   int _remainingSecondsTotal = totalTreatmentSeconds;
@@ -179,6 +185,7 @@ class MaskController extends ChangeNotifier {
 
       if (state == BleConnectionState.connected) {
         stopAutoReconnect();
+        _dispatchedBleGear = null;
         _lastHeartbeatTime = DateTime.now();
         // Reset to initial clean state on connection: No mode selected, Gear 1, Stopped, 12:00
         _selectedMode = null;
@@ -194,6 +201,7 @@ class MaskController extends ChangeNotifier {
         }
       } else if (state == BleConnectionState.disconnected) {
         final wasRunningOrConnected = oldState == BleConnectionState.connected;
+        _dispatchedBleGear = null;
         _isPowerOn = false;
         _isCombinationActive = false;
         _stopCountdown();
@@ -257,6 +265,7 @@ class MaskController extends ChangeNotifier {
         if (_selectedMode == null && !_isCombinationActive) {
           _selectedMode = MaskModeType.fromFirmwareValue(report.mode);
           _currentGear = _selectedMode!.getUiGearFromBle(report.gear);
+          _dispatchedBleGear = report.gear;
         }
         if (_skinMetrics.isEmpty) {
           _skinMetrics = SkinMetricData.initialBaseline;
@@ -277,6 +286,7 @@ class MaskController extends ChangeNotifier {
 
         if (elapsedSinceStart > 1200 && !report.isOpen) {
           debugPrint('⚠️ [MCU 离体保护回弹] 从机处于关闭状态 (packet[8] 开关: OFF)，可能未贴合皮肤或缺乏水分导电，自动回弹停止');
+          _dispatchedBleGear = null;
           _isPowerOn = false;
           _stopCountdown();
           _globalAlertController.add('skinContactDetached');
@@ -331,6 +341,7 @@ class MaskController extends ChangeNotifier {
     notifyListeners();
 
     if (isConnected) {
+      _dispatchedBleGear = mode.startGear;
       await _bleManager.sendControl(
         mode: mode.firmwareValue,
         gear: mode.startGear,
@@ -362,9 +373,11 @@ class MaskController extends ChangeNotifier {
     notifyListeners();
 
     if (isConnected) {
+      final bleGear = targetMode.getBleGear(1);
+      _dispatchedBleGear = bleGear;
       await _bleManager.sendControl(
         mode: targetMode.firmwareValue,
-        gear: targetMode.getBleGear(1),
+        gear: bleGear,
         isOpen: _isPowerOn, // Seamlessly keep current power state!
       );
     }
@@ -382,6 +395,7 @@ class MaskController extends ChangeNotifier {
     final targetBleGear = underlying.getBleGear(clampedGear);
     debugPrint('👉 [App UI 操作] 调节档位 -> $clampedGear 档 (模式: ${underlying.name}, 下发BLE通信档位: $targetBleGear, 运行中: $_isPowerOn)');
     _currentGear = clampedGear;
+    _dispatchedBleGear = targetBleGear;
     notifyListeners();
 
     if (isConnected) {
@@ -413,7 +427,8 @@ class MaskController extends ChangeNotifier {
     final targetPower = !_isPowerOn;
 
     if (_isPowerOn) {
-      // Transition from Running -> Paused
+      // Transition from Running -> Paused (Immediate 0-latency safety cut-off)
+      _dispatchedBleGear = null;
       _isPowerOn = false;
       _lastPauseRequestTime = DateTime.now();
       _sessionLastPausedTime = DateTime.now();
@@ -442,11 +457,21 @@ class MaskController extends ChangeNotifier {
 
     notifyListeners();
 
-    await _bleManager.sendControl(
-      mode: underlying.firmwareValue,
-      gear: targetBleGear,
-      isOpen: _isPowerOn,
-    );
+    if (_isPowerOn) {
+      _dispatchedBleGear = targetBleGear;
+      await _bleManager.sendControl(
+        mode: underlying.firmwareValue,
+        gear: targetBleGear,
+        isOpen: true,
+      );
+    } else {
+      _dispatchedBleGear = null;
+      await _bleManager.sendControl(
+        mode: underlying.firmwareValue,
+        gear: targetBleGear,
+        isOpen: false,
+      );
+    }
   }
 
   void _startCountdown() {
@@ -503,10 +528,11 @@ class MaskController extends ChangeNotifier {
           if (targetStage != _combinationCurrentStage) {
             _combinationCurrentStage = targetStage;
             final stageMode = _combinationSequence[targetStage];
-            // Send updated mode command to BLE mask, maintaining current gear
+            final stageBleGear = stageMode.getBleGear(_currentGear);
+            _dispatchedBleGear = stageBleGear;
             _bleManager.sendControl(
               mode: stageMode.firmwareValue,
-              gear: stageMode.getBleGear(_currentGear),
+              gear: stageBleGear,
               isOpen: true,
             );
           }
@@ -514,6 +540,7 @@ class MaskController extends ChangeNotifier {
         notifyListeners();
       } else {
         // Timer completed (12 minutes reached)
+        _dispatchedBleGear = null;
         _isPowerOn = false;
         _isCombinationActive = false;
         _stopCountdown();
@@ -631,6 +658,7 @@ class MaskController extends ChangeNotifier {
   Future<void> unbindCurrentDevice() async {
     debugPrint('👉 [App UI 操作] 解绑/断开设备');
     await _finalizeAndSaveSession(isCompleted: false);
+    _dispatchedBleGear = null;
     stopAutoReconnect();
     _isPowerOn = false;
     _isCombinationActive = false;

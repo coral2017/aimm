@@ -42,12 +42,8 @@ void main() {
         expect(packet[i], equals(0x00));
       }
 
-      // Verify CRC: sum of bytes 2..16
-      int expectedCrc = 0;
-      for (int i = 2; i <= 16; i++) {
-        expectedCrc = (expectedCrc + packet[i]) & 0xFF;
-      }
-      expect(packet[17], equals(expectedCrc));
+      // Verify Frame Check / Byte 17: Aligned with WeChat Mini Program (0x1E)
+      expect(packet[17], equals(0x1E));
 
       // Verify Trailer: 2C FF
       expect(packet[18], equals(0x2C));

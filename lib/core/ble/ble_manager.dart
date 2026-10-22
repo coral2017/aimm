@@ -5,6 +5,7 @@ import 'ble_mock_service.dart';
 import 'ble_protocol.dart';
 import 'ble_real_service.dart';
 import 'ble_service_interface.dart';
+import '../storage/ble_tx_log_service.dart';
 
 /// Unified BLE Manager coordinating active BLE service (Real vs Mock)
 class BleManager {
@@ -72,6 +73,12 @@ class BleManager {
       mode: mode,
       gear: gear,
       isOpen: isOpen,
+    );
+    BleTxLogService.instance.recordCommand(
+      mode: mode,
+      gear: gear,
+      isOpen: isOpen,
+      packet: packet,
     );
     return _service.sendControlPacket(packet);
   }
