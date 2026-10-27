@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback.dart';
+import '../../../control/presentation/widgets/beauty_hub_icons.dart';
 import '../../../control/providers/mask_controller.dart';
 
 class SavedModesPage extends StatelessWidget {
@@ -11,12 +13,14 @@ class SavedModesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<MaskController>();
     final presets = controller.savedPresets;
-    final canAddCurrent = controller.selectedMode != null && !controller.isCurrentSaved;
+    final canAddCurrent =
+        (controller.selectedMode != null || controller.isCombinationActive) &&
+            !controller.isCurrentSaved;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.textPrimary),
@@ -37,18 +41,19 @@ class SavedModesPage extends StatelessWidget {
               child: Center(
                 child: ElevatedButton(
                   onPressed: () async {
-                    await controller.savePreset(
-                      mode: controller.selectedMode!,
-                      gear: controller.currentGear,
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(context.tr('modeSavedSuccess')),
-                          backgroundColor: AppColors.primary,
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                    if (controller.isCombinationActive) {
+                      await controller.savePreset(
+                        isCombination: true,
+                        gear: controller.currentGear,
                       );
+                    } else if (controller.selectedMode != null) {
+                      await controller.savePreset(
+                        mode: controller.selectedMode!,
+                        gear: controller.currentGear,
+                      );
+                    }
+                    if (context.mounted) {
+                      AppToast.showSuccess(context, context.tr('modeSavedSuccess'));
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -97,12 +102,12 @@ class SavedModesPage extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (ctx, index) {
                 final preset = presets[index];
-                final isCurrentlyActive = controller.selectedMode == preset.mode &&
-                    controller.currentGear == preset.gear &&
-                    controller.isRunning;
+                final isCurrentlyActive = preset.isCombination
+                    ? (controller.isCombinationActive && controller.currentGear == preset.gear && controller.isRunning)
+                    : (controller.selectedMode == preset.mode && controller.currentGear == preset.gear && controller.isRunning);
 
                 return Material(
-                  color: Colors.white,
+                  color: AppColors.cardBackground,
                   borderRadius: BorderRadius.circular(14),
                   elevation: 0,
                   child: InkWell(
@@ -118,7 +123,7 @@ class SavedModesPage extends StatelessWidget {
                         border: Border.all(
                           color: isCurrentlyActive
                               ? AppColors.primary
-                              : const Color(0xFFF0ECE4),
+                              : AppColors.cardBorder,
                           width: isCurrentlyActive ? 1.5 : 1.0,
                         ),
                       ),
@@ -132,20 +137,28 @@ class SavedModesPage extends StatelessWidget {
                                   : AppColors.capsuleBackground,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(
-                              preset.mode.icon,
-                              color: isCurrentlyActive
-                                  ? AppColors.primaryDark
-                                  : AppColors.primary,
-                              size: 20,
-                            ),
+                            child: preset.isCombination
+                                ? Icon(
+                                    Icons.layers_rounded,
+                                    color: isCurrentlyActive
+                                        ? AppColors.primaryDark
+                                        : AppColors.primary,
+                                    size: 20,
+                                  )
+                                : BeautyHubIcon(
+                                    mode: preset.mode,
+                                    color: isCurrentlyActive
+                                        ? AppColors.primaryDark
+                                        : AppColors.primary,
+                                    size: 20,
+                                  ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Row(
                               children: [
                                 Text(
-                                  context.tr(preset.mode.l10nKey),
+                                  context.tr(preset.displayTitleKey),
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,

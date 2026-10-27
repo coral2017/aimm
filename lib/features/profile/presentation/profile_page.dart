@@ -6,7 +6,9 @@ import '../../connection/presentation/device_connection_dialog.dart';
 import '../../control/providers/mask_controller.dart';
 import 'subpages/history_report_page.dart';
 import 'subpages/saved_modes_page.dart';
-import 'widgets/ble_tx_log_dialog.dart';
+import 'subpages/user_manual_page.dart';
+import 'widgets/report_trend_icon.dart';
+import 'widgets/smart_device_icon.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -33,7 +35,10 @@ class ProfilePage extends StatelessWidget {
                 // Menu Items List
                 _buildMenuItem(
                   context: context,
-                  icon: Icons.access_time_rounded,
+                  customIcon: const ReportTrendIcon(
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                   title: context.tr('historyReport'),
                   onTap: () {
                     Navigator.of(context).push(
@@ -55,7 +60,10 @@ class ProfilePage extends StatelessWidget {
 
                 _buildMenuItem(
                   context: context,
-                  icon: Icons.phone_iphone_rounded,
+                  customIcon: const SmartDeviceIcon(
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
                   title: context.tr('deviceManagement'),
                   onTap: () => DeviceConnectionDialog.show(context),
                 ),
@@ -79,10 +87,17 @@ class ProfilePage extends StatelessWidget {
                   icon: Icons.help_outline_rounded,
                   title: context.tr('helpCenter'),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('AI-Smart Mask V2 Manual & FAQ v1.0.9')),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const UserManualPage()),
                     );
                   },
+                ),
+
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.info_outline_rounded,
+                  title: context.tr('aboutUs'),
+                  onTap: () => _showAboutUsDialog(context),
                 ),
 
                 // _buildMenuItem(
@@ -132,8 +147,9 @@ class ProfilePage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.cardBorder, width: 1.0),
         boxShadow: const [
           BoxShadow(
             color: AppColors.shadow,
@@ -150,7 +166,7 @@ class ProfilePage extends StatelessWidget {
             height: 76,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFE8DCCF), width: 2),
+              border: Border.all(color: AppColors.primaryLight, width: 2),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.2),
@@ -231,16 +247,19 @@ class ProfilePage extends StatelessWidget {
 
   Widget _buildMenuItem({
     required BuildContext context,
-    required IconData icon,
+    IconData? icon,
+    Widget? customIcon,
     required String title,
+    String? trailingText,
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.cardBorder, width: 1.0),
         boxShadow: const [
           BoxShadow(
             color: AppColors.shadow,
@@ -263,12 +282,13 @@ class ProfilePage extends StatelessWidget {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: isDestructive ? const Color(0xFFFFECEB) : const Color(0xFFF6F4F0),
+                    color: isDestructive ? const Color(0xFFFFECEB) : AppColors.sliderButton,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
+                  alignment: Alignment.center,
+                  child: customIcon ?? Icon(
                     icon,
-                    size: 18,
+                    size: 19,
                     color: isDestructive ? AppColors.error : AppColors.primary,
                   ),
                 ),
@@ -287,11 +307,151 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
 
+                // Trailing text if any (e.g. 'v1.0.0')
+                if (trailingText != null) ...[
+                  Text(
+                    trailingText,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+
                 // Arrow Right
                 const Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
                   color: AppColors.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAboutUsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 280,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            decoration: BoxDecoration(
+              color: const Color(0xFF181E28),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.35),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // App Logo with subtle gold border
+                Container(
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16.5),
+                    child: Image.asset(
+                      'assets/images/app.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // App Name: Smart Skin Sensor
+                const Text(
+                  'Smart Skin Sensor',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Version Chip: v1.0.0
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: const Text(
+                    'v1.0.10',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Status: Latest Version
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF52C41A),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      context.tr('latestVersion'),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

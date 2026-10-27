@@ -190,6 +190,27 @@ void main() {
       expect(controller.savedPresets.length, 1);
       expect(controller.isCurrentSaved, false);
 
+      // Combination Mode Saving (WeChat Mini Program parity)
+      await controller.switchToCombinationMode();
+      await controller.setGear(2);
+      expect(controller.isCombinationActive, true);
+      expect(controller.isCurrentSaved, false);
+
+      // Save combination preset
+      await controller.savePreset(isCombination: true, gear: 2);
+      expect(controller.isCurrentSaved, true);
+      expect(controller.savedPresets.length, 2);
+      final comboPreset = controller.savedPresets.firstWhere((p) => p.isCombination);
+      expect(comboPreset.isCombination, true);
+      expect(comboPreset.gear, 2);
+
+      // Switch away and apply combination preset
+      controller.setMode(MaskModeType.plumping);
+      expect(controller.isCombinationActive, false);
+      await controller.applyPresetAndStart(comboPreset);
+      expect(controller.isCombinationActive, true);
+      expect(controller.currentGear, 2);
+
       controller.dispose();
     });
 

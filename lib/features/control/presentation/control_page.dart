@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback.dart';
 import '../../report/presentation/analysis_report_page.dart';
 import '../providers/mask_controller.dart';
 import '../../profile/presentation/subpages/saved_modes_page.dart';
@@ -29,29 +30,11 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
       final controller = context.read<MaskController>();
       _alertSub = controller.globalAlertStream.listen((alertKey) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    context.tr(alertKey),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: alertKey.contains('Complete')
-                ? const Color(0xFF2E7D32)
-                : const Color(0xFFC62828),
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+        if (alertKey.contains('Complete')) {
+          AppToast.showSuccess(context, context.tr(alertKey));
+        } else {
+          AppToast.showWarning(context, context.tr(alertKey));
+        }
       });
     });
   }
@@ -80,11 +63,11 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
 
               // Top Bar: App Title & Analysis Report Navigation Link (Figma 0:810)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 4.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 2.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -93,7 +76,7 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
                     Text(
                       context.tr('appTitle'),
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: 19,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
                         letterSpacing: -0.5,
@@ -137,7 +120,7 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
                 ),
               ),
 
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
 
               // Card 1: Combined Top Status & 4-Metric Bar Card (Figma 0:810 / 18:591)
               const StatusMetricCard(),
@@ -154,15 +137,9 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
                 onCombinationTap: () {
                   final controller = context.read<MaskController>();
                   if (!controller.isConnected) {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(context.tr('disconnected')),
-                        backgroundColor: AppColors.textPrimary,
-                        duration: const Duration(seconds: 1),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
+                    AppToast.showGoldenToast(
+                      context,
+                      context.tr('deviceNotConnected'),
                     );
                     return;
                   }
@@ -174,16 +151,16 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
 
               // Card 3: Intensity Level Slider Card (Figma 0:811)
               IntensitySlider(
+                onNotConnectedTap: () {
+                  AppToast.showGoldenToast(
+                    context,
+                    context.tr('deviceNotConnected'),
+                  );
+                },
                 onBlockedTap: () {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(context.tr('mustStartBeforeAdjust')),
-                      backgroundColor: AppColors.primary,
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
+                  AppToast.showGoldenToast(
+                    context,
+                    context.tr('mustStartBeforeAdjust'),
                   );
                 },
                 onHighIntensityRequested: (targetGear) async {
@@ -194,7 +171,7 @@ class _ControlPageState extends State<ControlPage> with WidgetsBindingObserver {
                 },
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
             ],
           ),
         ),

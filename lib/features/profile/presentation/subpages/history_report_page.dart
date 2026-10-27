@@ -47,7 +47,7 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
-              ctx.tr('cancelConnection'),
+              ctx.tr('cancel'),
               style: const TextStyle(color: AppColors.textSecondary),
             ),
           ),
@@ -207,8 +207,9 @@ class _HistoryReportPageState extends State<HistoryReportPage> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.cardBorder, width: 1.0),
             boxShadow: const [
               BoxShadow(color: AppColors.shadow, blurRadius: 10, offset: Offset(0, 2)),
             ],

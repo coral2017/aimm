@@ -28,9 +28,10 @@ class HighIntensityDialog extends StatelessWidget {
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: AppColors.cardBorder, width: 1.0),
       ),
       elevation: 0,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.cardBackground,
       insetPadding: const EdgeInsets.symmetric(horizontal: 28),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
@@ -58,7 +59,7 @@ class HighIntensityDialog extends StatelessWidget {
                 (index) => Expanded(
                   child: Container(
                     height: 1,
-                    color: index.isEven ? const Color(0xFFE8E5DF) : Colors.transparent,
+                    color: index.isEven ? AppColors.divider : Colors.transparent,
                   ),
                 ),
               ),
@@ -88,7 +89,7 @@ class HighIntensityDialog extends StatelessWidget {
                     onPressed: onAccept,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textPrimary,
-                      side: const BorderSide(color: Color(0xFFE5E0D6), width: 1.2),
+                      side: const BorderSide(color: AppColors.cardBorder, width: 1.2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

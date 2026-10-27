@@ -15,36 +15,47 @@ import '../models/mask_mode.dart';
 class SavedModePreset {
   final String id;
   final String name;
-  final MaskModeType mode;
+  final MaskModeType? _mode;
+  final bool? _isCombination;
   final int gear;
   final DateTime createdAt;
 
   SavedModePreset({
     required this.id,
     required this.name,
-    required this.mode,
+    MaskModeType? mode,
+    bool? isCombination = false,
     required this.gear,
     required this.createdAt,
-  });
+  })  : _mode = mode,
+        _isCombination = isCombination;
+
+  bool get isCombination => _isCombination == true;
+  MaskModeType get mode => _mode ?? MaskModeType.firming;
+  IconData get displayIcon => isCombination ? Icons.layers_rounded : mode.icon;
+  String get displayTitleKey => isCombination ? 'combination' : mode.l10nKey;
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
-      'modeId': mode.id,
+      'modeId': isCombination ? -1 : mode.id,
+      'isCombination': isCombination,
       'gear': gear,
       'createdAt': createdAt.toIso8601String(),
     };
   }
 
   factory SavedModePreset.fromMap(Map<String, dynamic> map) {
+    final isCombination = map['isCombination'] == true;
     final modeId = map['modeId'] as int? ?? 0;
     return SavedModePreset(
-      id: map['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      name: map['name'] as String? ?? '',
-      mode: MaskModeType.fromId(modeId),
+      id: map['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      name: map['name']?.toString() ?? '',
+      isCombination: isCombination,
+      mode: isCombination ? null : MaskModeType.fromId(modeId),
       gear: (map['gear'] as num?)?.toInt() ?? 1,
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 }
@@ -72,6 +83,7 @@ class MaskController extends ChangeNotifier {
   static const int maxGear = 10;
   DateTime? _lastStartRequestTime;
   DateTime? _lastPauseRequestTime;
+  DateTime? _lastTreatmentCompleteTime;
 
   MaskModeType? _selectedMode; // Nullable: unselected upon connection
   int _currentGear = 1; // Default initial gear is 1 (Range: 1 ~ 10)
@@ -158,8 +170,11 @@ class MaskController extends ChangeNotifier {
 
   /// Checks if current mode & gear have already been saved
   bool get isCurrentSaved {
+    if (_isCombinationActive) {
+      return _savedPresets.any((p) => p.isCombination && p.gear == _currentGear);
+    }
     if (_selectedMode == null) return false;
-    return _savedPresets.any((p) => p.mode == _selectedMode && p.gear == _currentGear);
+    return _savedPresets.any((p) => !p.isCombination && p.mode == _selectedMode && p.gear == _currentGear);
   }
   bool get hasAcknowledgedHighIntensity => _hasAcknowledgedHighIntensity;
   bool get isCombinationActive => _isCombinationActive;
@@ -254,9 +269,18 @@ class MaskController extends ChangeNotifier {
       final elapsedSincePause = _lastPauseRequestTime != null
           ? DateTime.now().difference(_lastPauseRequestTime!).inMilliseconds
           : 9999;
+      final elapsedSinceComplete = _lastTreatmentCompleteTime != null
+          ? DateTime.now().difference(_lastTreatmentCompleteTime!).inMilliseconds
+          : 99999;
 
-      // 如果 App 本地未启动，且并非刚刚由 App 主动下发暂停（避免飞行中的旧报文误唤醒），直接同步接续从机的运行状态与时间
-      if (!_isPowerOn && elapsedSincePause > 1500) {
+      // 如果 App 本地未启动，且并非刚刚由 App 主动下发暂停或护理刚完成（避免飞行中的旧报文误唤醒），直接同步接续从机的运行状态与时间
+      if (!_isPowerOn) {
+        // 防护拦截：刚完成一轮护理(5秒内)、刚刚暂停(1.5秒内)、或MCU剩余时间已耗尽(<=3秒)时，严禁误触发开机接续
+        if (elapsedSincePause <= 1500 || elapsedSinceComplete <= 5000 || mcuRemainingSeconds <= 3) {
+          debugPrint('🛡️ [忽略从机接续] 拦截刚完成/已耗尽/刚刚暂停的飞行残余报文 (完成间隔: ${elapsedSinceComplete}ms, 暂停间隔: ${elapsedSincePause}ms, MCU剩余: ${mcuRemainingSeconds}s)');
+          return;
+        }
+
         debugPrint('🔄 [从机状态接续] 从机正在运行中，同步接续运行状态与时间: ${report.workMinutes}分${report.workSeconds}秒 (模式: ${report.mode}, 档位: ${report.gear})');
         _isPowerOn = true;
         _remainingSecondsTotal = mcuRemainingSeconds > 0 ? mcuRemainingSeconds : totalTreatmentSeconds;
@@ -272,8 +296,16 @@ class MaskController extends ChangeNotifier {
         }
         _startCountdown();
       } else {
-        // 如果已经在运行中，与下位机时间偏差超过 3 秒平滑对齐（下位机与 App 保持一致的全局 12 分钟倒计时）
-        if ((_remainingSecondsTotal - mcuRemainingSeconds).abs() > 3 && mcuRemainingSeconds > 0) {
+        // 如果已经在运行中，与下位机时间偏差平滑对齐
+        final elapsedSinceStart = _lastStartRequestTime != null
+            ? DateTime.now().difference(_lastStartRequestTime!).inSeconds
+            : 9999;
+
+        // 核心防护：在刚启动的前 5 秒内，如果下位机上报的剩余时间极短 (<= 60 秒)，
+        // 100% 是上一轮护理刚结束时固件时钟还未完全重载到12分钟的旧残留时钟，严禁向下同步！
+        if (elapsedSinceStart < 5 && mcuRemainingSeconds <= 60) {
+          debugPrint('🛡️ [时钟对齐保护] 启动初期($elapsedSinceStart秒)下位机上报时间异常($mcuRemainingSeconds秒)，忽略上一轮残留的耗尽时钟');
+        } else if (mcuRemainingSeconds > 3 && (_remainingSecondsTotal - mcuRemainingSeconds).abs() > 3) {
           _remainingSecondsTotal = mcuRemainingSeconds;
         }
       }
@@ -337,6 +369,10 @@ class MaskController extends ChangeNotifier {
     _selectedMode = mode;
     _currentGear = 1; // Always reset UI gear to 1 on mode switch
 
+    if (_remainingSecondsTotal <= 10) {
+      _remainingSecondsTotal = totalTreatmentSeconds;
+    }
+
     // Do NOT stop countdown or pause power if currently running!
     notifyListeners();
 
@@ -362,6 +398,11 @@ class MaskController extends ChangeNotifier {
 
     if (_combinationSequence.isEmpty) {
       _combinationSequence = List<MaskModeType>.from(MaskModeType.values);
+    }
+
+    if (_remainingSecondsTotal <= 10) {
+      _remainingSecondsTotal = totalTreatmentSeconds;
+      _skinMetrics = SkinMetricData.initialBaseline;
     }
 
     final elapsed = totalTreatmentSeconds - _remainingSecondsTotal;
@@ -436,13 +477,13 @@ class MaskController extends ChangeNotifier {
     } else {
       // Transition from Paused/Stopped -> Running
       _lastPauseRequestTime = null;
+      _lastTreatmentCompleteTime = null;
       // Safety rule: Always reset gear to 1 when restarting to prevent sudden high-intensity surge!
       _currentGear = 1;
 
-      if (_remainingSecondsTotal <= 0) {
+      // 如果剩余时间处于耗尽临界(<= 10秒)或水柱为空，视为新一轮护理，重置为满 12 分钟 (720秒)
+      if (_remainingSecondsTotal <= 10 || _skinMetrics.isEmpty) {
         _remainingSecondsTotal = totalTreatmentSeconds;
-        _skinMetrics = SkinMetricData.initialBaseline;
-      } else if (_skinMetrics.isEmpty) {
         _skinMetrics = SkinMetricData.initialBaseline;
       }
       _isPowerOn = true;
@@ -539,30 +580,38 @@ class MaskController extends ChangeNotifier {
         }
         notifyListeners();
       } else {
-        // Timer completed (12 minutes reached)
-        _dispatchedBleGear = null;
-        _isPowerOn = false;
-        _isCombinationActive = false;
-        _stopCountdown();
-        _remainingSecondsTotal = totalTreatmentSeconds; // Reset to 12:00 for next session
-        _globalAlertController.add('treatmentCompleteAlert');
-        unawaited(_finalizeAndSaveSession(isCompleted: true));
-
-        // 【重置皮肤指标水柱与模式选中态】
-        _skinMetrics = SkinMetricData.empty;
-        _selectedMode = null;
-        _currentGear = 1;
-        notifyListeners();
-
-        final underlying = activeUnderlyingMode;
-        _bleManager.sendControl(
-          mode: underlying.firmwareValue,
-          gear: underlying.getBleGear(_currentGear),
-          isOpen: false,
-        );
+        _onTreatmentCompleted();
       }
     });
   }
+
+  void _onTreatmentCompleted() {
+    _dispatchedBleGear = null;
+    _isPowerOn = false;
+    _isCombinationActive = false;
+    _stopCountdown();
+    _remainingSecondsTotal = totalTreatmentSeconds; // Reset to 12:00 for next session
+    _lastTreatmentCompleteTime = DateTime.now();
+    _lastPauseRequestTime = DateTime.now();
+    _globalAlertController.add('treatmentCompleteAlert');
+    unawaited(_finalizeAndSaveSession(isCompleted: true));
+
+    // 【重置皮肤指标水柱与模式选中态】
+    _skinMetrics = SkinMetricData.empty;
+    _selectedMode = null;
+    _currentGear = 1;
+    notifyListeners();
+
+    final underlying = activeUnderlyingMode;
+    _bleManager.sendControl(
+      mode: underlying.firmwareValue,
+      gear: underlying.getBleGear(_currentGear),
+      isOpen: false,
+    );
+  }
+
+  @visibleForTesting
+  void triggerTreatmentCompleteForTesting() => _onTreatmentCompleted();
 
   void _stopCountdown() {
     _countdownTimer?.cancel();
@@ -654,9 +703,14 @@ class MaskController extends ChangeNotifier {
     return success;
   }
 
+  /// Unpair from current device (clears saved device pairing)
+  Future<void> unpairCurrentDevice() async {
+    await unbindCurrentDevice();
+  }
+
   /// Unbind / Disconnect from current device
   Future<void> unbindCurrentDevice() async {
-    debugPrint('👉 [App UI 操作] 解绑/断开设备');
+    debugPrint('👉 [App UI 操作] 解除配对/断开设备');
     await _finalizeAndSaveSession(isCompleted: false);
     _dispatchedBleGear = null;
     stopAutoReconnect();
@@ -685,26 +739,42 @@ class MaskController extends ChangeNotifier {
   }
 
   Future<void> saveCurrentPreset(String name) async {
-    final mode = _selectedMode ?? currentMode;
-    await savePreset(mode: mode, gear: _currentGear, customName: name);
+    if (_isCombinationActive) {
+      await savePreset(isCombination: true, gear: _currentGear, customName: name);
+    } else {
+      final mode = _selectedMode ?? currentMode;
+      await savePreset(mode: mode, gear: _currentGear, customName: name);
+    }
   }
 
-  Future<void> savePreset({required MaskModeType mode, required int gear, String? customName}) async {
+  Future<void> savePreset({
+    MaskModeType? mode,
+    bool isCombination = false,
+    required int gear,
+    String? customName,
+  }) async {
     final clampedGear = gear.clamp(1, maxGear);
-    final existingIndex = _savedPresets.indexWhere((p) => p.mode == mode && p.gear == clampedGear);
+    final existingIndex = _savedPresets.indexWhere((p) =>
+        isCombination
+            ? (p.isCombination && p.gear == clampedGear)
+            : (!p.isCombination && p.mode == mode && p.gear == clampedGear));
     if (existingIndex >= 0) {
-      debugPrint('ℹ️ [预设保存] 该模式与档位已存在于保存列表中 (mode: ${mode.name}, gear: $clampedGear)');
+      debugPrint('ℹ️ [预设保存] 该模式与档位已存在于保存列表中 (combination: $isCombination, mode: ${mode?.name}, gear: $clampedGear)');
       return;
     }
 
+    final defaultName = isCombination
+        ? '综合模式 · L$clampedGear'
+        : '${mode?.l10nKey ?? ""} · L$clampedGear';
     final displayName = customName?.trim().isNotEmpty == true
         ? customName!.trim()
-        : '${mode.l10nKey} · L$clampedGear';
+        : defaultName;
 
     final newPreset = SavedModePreset(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: displayName,
-      mode: mode,
+      mode: isCombination ? null : mode,
+      isCombination: isCombination,
       gear: clampedGear,
       createdAt: DateTime.now(),
     );
@@ -716,16 +786,27 @@ class MaskController extends ChangeNotifier {
   }
 
   Future<void> applyPresetAndStart(SavedModePreset preset) async {
-    debugPrint('🚀 [应用并运行预设] 模式: ${preset.mode.name}, 档位: ${preset.gear}');
-    setMode(preset.mode);
-    _currentGear = preset.gear;
-    notifyListeners();
+    debugPrint('🚀 [应用并运行预设] 模式: ${preset.isCombination ? "综合模式" : preset.mode.name}, 档位: ${preset.gear}');
+    if (preset.isCombination) {
+      await switchToCombinationMode();
+      _currentGear = preset.gear;
+      notifyListeners();
 
-    if (isConnected) {
-      if (!_isPowerOn) {
-        await togglePower();
+      if (isConnected) {
+        if (!_isPowerOn) {
+          await togglePower();
+        }
         await setGear(preset.gear);
-      } else {
+      }
+    } else {
+      setMode(preset.mode);
+      _currentGear = preset.gear;
+      notifyListeners();
+
+      if (isConnected) {
+        if (!_isPowerOn) {
+          await togglePower();
+        }
         await setGear(preset.gear);
       }
     }
@@ -810,11 +891,14 @@ class MaskController extends ChangeNotifier {
     final modeKey = _isCombinationActive ? 'combination' : activeUnderlyingMode.name;
     final modeName = _isCombinationActive ? '综合模式' : activeUnderlyingMode.l10nKey;
 
+    // 单次护理最大时长上限钳位至标准12分钟(720秒)，消除蓝牙时间同步及重试导致的数秒毛刺
+    final cappedDuration = min(_sessionAccumulatedSeconds, totalTreatmentSeconds);
+
     final report = SkincareReportModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       startTime: _sessionStartTime!,
       endTime: DateTime.now(),
-      actualDurationSeconds: _sessionAccumulatedSeconds,
+      actualDurationSeconds: cappedDuration,
       modeKey: modeKey,
       modeName: modeName,
       maxGear: _sessionMaxGear,

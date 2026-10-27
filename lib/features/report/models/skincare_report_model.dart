@@ -34,8 +34,12 @@ class SkincareReportModel {
     required this.isCompleted,
   });
 
-  /// Duration formatted as "X min" or "Xm Ys"
+  /// Duration formatted as "X min" or "X min Y s"
   String get formattedDuration {
+    // 完整护理完成（或达到标准12分钟阈值）时，规范化呈现为标准 12 min，过滤硬件时钟毛刺
+    if (isCompleted || actualDurationSeconds >= 715) {
+      return '12 min';
+    }
     final m = actualDurationSeconds ~/ 60;
     final s = actualDurationSeconds % 60;
     if (s == 0) {

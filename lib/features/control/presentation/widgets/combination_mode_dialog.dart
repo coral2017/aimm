@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback.dart';
 import '../../models/mask_mode.dart';
 import '../../providers/mask_controller.dart';
 
@@ -25,7 +26,7 @@ class CombinationModeDialog extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -39,7 +40,7 @@ class CombinationModeDialog extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFE0DDD5),
+                color: AppColors.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -85,6 +86,7 @@ class CombinationModeDialog extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.capsuleBackground,
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.cardBorder, width: 0.8),
             ),
             child: Column(
               children: List.generate(allModes.length, (index) {
@@ -99,7 +101,7 @@ class CombinationModeDialog extends StatelessWidget {
                       icon: mode.icon,
                     ),
                     if (index < allModes.length - 1)
-                      const Divider(height: 12, color: Color(0xFFE5E0D6)),
+                      const Divider(height: 12, color: AppColors.divider),
                   ],
                 );
               }),
@@ -117,13 +119,7 @@ class CombinationModeDialog extends StatelessWidget {
                   onPressed: () {
                     controller.startCombinationMode(isRandom: true);
                     Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${context.tr('start')}: ${context.tr('randomCycle')} (12:00)'),
-                        backgroundColor: AppColors.primary,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
+                    AppToast.showInfo(context, '${context.tr('start')}: ${context.tr('randomCycle')} (12:00)');
                   },
                   icon: const Icon(Icons.shuffle_rounded, size: 18),
                   label: Text(context.tr('randomCycle')),
@@ -144,13 +140,7 @@ class CombinationModeDialog extends StatelessWidget {
                   onPressed: () {
                     controller.startCombinationMode(isRandom: false);
                     Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${context.tr('start')}: ${context.tr('sequenceCycle')} (12:00)'),
-                        backgroundColor: AppColors.primary,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
+                    AppToast.showInfo(context, '${context.tr('start')}: ${context.tr('sequenceCycle')} (12:00)');
                   },
                   icon: const Icon(Icons.play_arrow_rounded, size: 20),
                   label: Text(context.tr('sequenceCycle')),

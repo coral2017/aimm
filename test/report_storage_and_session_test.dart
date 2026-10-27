@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aimm/core/ble/ble_device_info.dart';
+import 'package:aimm/core/ble/ble_protocol.dart';
 import 'package:aimm/core/storage/report_storage_service.dart';
 import 'package:aimm/features/control/models/mask_mode.dart';
 import 'package:aimm/features/control/providers/mask_controller.dart';
@@ -171,6 +172,70 @@ void main() {
       expect(saved.actualDurationSeconds, 720);
       expect(saved.formattedDuration, '12 min');
 
+      controller.dispose();
+    });
+
+    test('Restarting treatment after 12-min completion ignores MCU stale packets and runs cleanly', () async {
+      final controller = MaskController();
+      const testDevice = BleDeviceInfo(id: 'TEST-DEV', name: 'AIMO Mask');
+      await controller.connect(testDevice);
+
+      final alerts = <String>[];
+      final alertSub = controller.globalAlertStream.listen(alerts.add);
+
+      // 1. Start and complete a 12-minute session
+      controller.setMode(MaskModeType.rejuvenating);
+      await controller.togglePower();
+      expect(controller.isRunning, isTrue);
+
+      controller.triggerTreatmentCompleteForTesting();
+      await pumpEventQueue();
+      expect(controller.isRunning, isFalse);
+      expect(controller.selectedMode, isNull);
+      expect(controller.remainingSecondsTotal, equals(720));
+      expect(alerts.contains('treatmentCompleteAlert'), isTrue);
+      alerts.clear(); // Clear the first completion alert
+
+      // 2. Trailing ghost packet from MCU with 1 second remaining arrives right after completion
+      controller.handleStatusReportForTesting(const BleStatusReport(
+        mode: 7,
+        gear: 13,
+        isOpen: true,
+        battery: 80,
+        workMinutes: 0,
+        workSeconds: 1,
+      ));
+      // Guard must prevent auto-resuming with stale completion residue
+      expect(controller.isRunning, isFalse);
+      expect(controller.remainingSecondsTotal, equals(720));
+
+      // 3. User selects a new mode
+      await controller.setMode(MaskModeType.firming);
+      expect(controller.selectedMode, MaskModeType.firming);
+      expect(controller.currentGear, 1);
+
+      // 4. User clicks Start
+      await controller.togglePower();
+      expect(controller.isRunning, isTrue);
+      expect(controller.remainingSecondsTotal, equals(720));
+
+      // 5. MCU sends status packet with lingering 00:01 time before MCU hardware reloads 12:00
+      controller.handleStatusReportForTesting(const BleStatusReport(
+        mode: 4,
+        gear: 13,
+        isOpen: true,
+        battery: 80,
+        workMinutes: 0,
+        workSeconds: 1,
+      ));
+
+      // Guard must ignore stale <= 60s time during initial 5 seconds, keeping 720s
+      expect(controller.remainingSecondsTotal, equals(720));
+      expect(controller.isRunning, isTrue);
+      // No duplicate treatmentCompleteAlert must have fired!
+      expect(alerts.contains('treatmentCompleteAlert'), isFalse);
+
+      await alertSub.cancel();
       controller.dispose();
     });
   });

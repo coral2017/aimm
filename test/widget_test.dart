@@ -4,9 +4,9 @@ import 'package:aimm/app.dart';
 void main() {
   testWidgets('SmartMaskApp smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const SmartMaskApp());
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 200));
 
-    // Verify Control Tab and Treatment Area are rendered
-    expect(find.text('Treatment Area'), findsOneWidget);
+    // Verify Control Tab and Mode Selection are rendered
+    expect(find.text('Mode Selection'), findsOneWidget);
   });
 }

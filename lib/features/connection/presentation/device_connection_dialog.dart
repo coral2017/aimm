@@ -76,8 +76,11 @@ class _DeviceConnectionDialogState extends State<DeviceConnectionDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: AppColors.cardBorder, width: 1.0),
+      ),
+      backgroundColor: AppColors.cardBackground,
       insetPadding: const EdgeInsets.symmetric(horizontal: 32),
       child: Container(
         padding: const EdgeInsets.all(24),
@@ -252,12 +255,13 @@ class _DeviceConnectionDialogState extends State<DeviceConnectionDialog> {
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (ctx, index) {
               final device = _devices[index];
+              final deviceName = device.name.trim().isNotEmpty ? device.name : 'AIMM Smart Mask';
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppColors.capsuleBackground,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE8E4DC)),
+                  border: Border.all(color: AppColors.cardBorder),
                 ),
                 child: Row(
                   children: [
@@ -268,7 +272,7 @@ class _DeviceConnectionDialogState extends State<DeviceConnectionDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            device.name,
+                            deviceName,
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,

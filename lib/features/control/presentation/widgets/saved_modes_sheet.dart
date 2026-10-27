@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../providers/mask_controller.dart';
+import 'beauty_hub_icons.dart';
 import 'save_mode_dialog.dart';
 
 class SavedModesSheet extends StatelessWidget {
@@ -127,11 +128,12 @@ class SavedModesSheet extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (ctx, index) {
                         final preset = presets[index];
-                        final isCurrentlyActive = controller.selectedMode == preset.mode &&
-                            controller.currentGear == preset.gear;
+                        final isCurrentlyActive = preset.isCombination
+                            ? (controller.isCombinationActive && controller.currentGear == preset.gear)
+                            : (controller.selectedMode == preset.mode && controller.currentGear == preset.gear);
 
                         return Material(
-                          color: Colors.white,
+                          color: AppColors.cardBackground,
                           borderRadius: BorderRadius.circular(16),
                           elevation: 0,
                           child: InkWell(
@@ -147,7 +149,7 @@ class SavedModesSheet extends StatelessWidget {
                                 border: Border.all(
                                   color: isCurrentlyActive
                                       ? AppColors.primary
-                                      : const Color(0xFFF0ECE4),
+                                      : AppColors.cardBorder,
                                   width: isCurrentlyActive ? 1.5 : 1.0,
                                 ),
                               ),
@@ -161,13 +163,21 @@ class SavedModesSheet extends StatelessWidget {
                                           : AppColors.capsuleBackground,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(
-                                      preset.mode.icon,
-                                      color: isCurrentlyActive
-                                          ? AppColors.primaryDark
-                                          : AppColors.primary,
-                                      size: 22,
-                                    ),
+                                    child: preset.isCombination
+                                        ? Icon(
+                                            Icons.layers_rounded,
+                                            color: isCurrentlyActive
+                                                ? AppColors.primaryDark
+                                                : AppColors.primary,
+                                            size: 22,
+                                          )
+                                        : BeautyHubIcon(
+                                            mode: preset.mode,
+                                            color: isCurrentlyActive
+                                                ? AppColors.primaryDark
+                                                : AppColors.primary,
+                                            size: 22,
+                                          ),
                                   ),
                                   const SizedBox(width: 14),
                                   Expanded(
@@ -177,7 +187,7 @@ class SavedModesSheet extends StatelessWidget {
                                         Row(
                                           children: [
                                             Text(
-                                              context.tr(preset.mode.l10nKey),
+                                              context.tr(preset.displayTitleKey),
                                               style: const TextStyle(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.w600,

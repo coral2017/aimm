@@ -6,6 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../models/mask_mode.dart';
 import '../../providers/mask_controller.dart';
 import 'beauty_hub_icons.dart';
+import 'celestial_orbital_ring.dart';
+import '../../../../core/widgets/app_feedback.dart';
 
 class CircularModeDial extends StatefulWidget {
   final VoidCallback onSaveTap;
@@ -29,12 +31,12 @@ class _CircularModeDialState extends State<CircularModeDial>
   @override
   void initState() {
     super.initState();
-    // 呼吸光晕动画：周期 2.8 秒，平滑往复，Opacity 限制在 1.0 到 0.7 之间
+    // 呼吸光晕动画：周期 2.4 秒，更显著的深呼吸起伏（1.0 ~ 0.38）
     _breathingController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: const Duration(milliseconds: 2400),
     );
-    _breathingAnimation = Tween<double>(begin: 1.0, end: 0.7).animate(
+    _breathingAnimation = Tween<double>(begin: 1.0, end: 0.38).animate(
       CurvedAnimation(
         parent: _breathingController,
         curve: Curves.easeInOut,
@@ -67,11 +69,12 @@ class _CircularModeDialState extends State<CircularModeDial>
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-      padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder, width: 1.0),
         boxShadow: const [
           BoxShadow(
             color: AppColors.shadow,
@@ -90,9 +93,9 @@ class _CircularModeDialState extends State<CircularModeDial>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  context.tr('treatmentArea'),
+                  context.tr('modeSelection'),
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
@@ -101,24 +104,24 @@ class _CircularModeDialState extends State<CircularModeDial>
             ),
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
           // Central Circular Mode Selector (Figma 0:810 / 18:591 - Spanning edge-to-edge)
           Center(
             child: SizedBox(
-              width: 318,
-              height: 256,
+              width: 328,
+              height: 268,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Outer Faint Ring (Figma 0:863, diameter 240)
+                  // Outer Faint Ring (Figma 0:863, diameter 244)
                   Container(
-                    width: 236,
-                    height: 236,
+                    width: 244,
+                    height: 244,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFFF2EEE9),
+                        color: AppColors.dialOrbit,
                         width: 1.5,
                       ),
                     ),
@@ -136,125 +139,115 @@ class _CircularModeDialState extends State<CircularModeDial>
                     );
                   }),
 
-                  // Center Start / Pause Button (98x98)
-                  _buildCenterActionButton(
-                    context: context,
+                  // Center Start / Pause Button surrounded by Celestial Orbital Rings
+                  CelestialOrbitalRing(
                     isRunning: isRunning,
-                    isConnected: isConnected,
-                    onTap: () {
-                      if (!isConnected) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(context.tr('disconnected')),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                        return;
-                      }
-                      if (controller.selectedMode == null && !controller.isCombinationActive) {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(context.tr('pleaseSelectMode')),
-                            backgroundColor: AppColors.primary,
-                            duration: const Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        );
-                        return;
-                      }
-                      controller.togglePower();
-                    },
+                    size: 146,
+                    child: _buildCenterActionButton(
+                      context: context,
+                      isRunning: isRunning,
+                      isConnected: isConnected,
+                      onTap: () {
+                        if (!isConnected) {
+                          AppToast.showGoldenToast(
+                            context,
+                            context.tr('deviceNotConnected'),
+                          );
+                          return;
+                        }
+                        if (controller.selectedMode == null && !controller.isCombinationActive) {
+                          AppToast.showGoldenToast(
+                            context,
+                            context.tr('pleaseSelectMode'),
+                          );
+                          return;
+                        }
+                        controller.togglePower();
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
 
-          // Bottom Action Row (save & Combination) (Figma 0:849 & 0:830)
+          // Bottom Action Row: save & Combination (Compact Capsule Pills with comfortable clearance)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 14.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Save Button (Figma 0:849)
+                // Save Button (Figma 0:37 编组 13备份 - 紧凑胶囊形态)
                 InkWell(
                   onTap: widget.onSaveTap,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.bookmark_outline_rounded,
-                          size: 16,
-                          color: AppColors.textPrimary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          context.tr('save'),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.capsuleBackground,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.capsuleBorder, width: 0.8),
+                    ),
+                    child: Text(
+                      context.tr('save'),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ),
 
-                // Combination Button (Figma 0:830)
+                // Combination / Multi-Therapy Button (对齐6个标准模式的高级流金微透与光晕风格)
                 InkWell(
                   onTap: widget.onCombinationTap,
-                  borderRadius: BorderRadius.circular(10),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: controller.isCombinationActive
-                          ? AppColors.primary
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: controller.isCombinationActive && isRunning
-                          ? [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.35 * _breathingAnimation.value),
-                                blurRadius: 10,
-                                spreadRadius: 1,
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.layers_rounded,
-                          size: 16,
+                  borderRadius: BorderRadius.circular(16),
+                  child: AnimatedBuilder(
+                    animation: _breathingAnimation,
+                    builder: (context, child) {
+                      final double breath =
+                          (isRunning && controller.isCombinationActive) ? _breathingAnimation.value : 1.0;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        decoration: BoxDecoration(
                           color: controller.isCombinationActive
-                              ? Colors.white
-                              : AppColors.textPrimary,
+                              ? AppColors.primary.withValues(alpha: 0.16 * breath)
+                              : AppColors.capsuleBackground,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: controller.isCombinationActive
+                                ? AppColors.primary
+                                : AppColors.capsuleBorder,
+                            width: controller.isCombinationActive ? 1.0 : 0.8,
+                          ),
+                          boxShadow: controller.isCombinationActive
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: (isRunning ? 0.45 : 0.22) * breath),
+                                    blurRadius: (isRunning ? 14 : 8) * breath,
+                                    spreadRadius: (isRunning ? 2.0 : 1.0) * breath,
+                                  ),
+                                ]
+                              : null,
                         ),
-                        const SizedBox(width: 5),
-                        Text(
+                        child: Text(
                           context.tr('combination'),
+                          maxLines: 1,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: controller.isCombinationActive
                                 ? FontWeight.w600
                                 : FontWeight.w500,
                             color: controller.isCombinationActive
-                                ? Colors.white
-                                : AppColors.textPrimary,
+                                ? AppColors.primary
+                                : AppColors.textSecondary,
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -282,13 +275,13 @@ class _CircularModeDialState extends State<CircularModeDial>
       MaskModeType.plumping => 210.0, // Top Left
     };
 
-    // Radius tuned to 114 to span gracefully across card
-    const double radius = 114.0;
+    // Radius tuned to 118 to span gracefully across enlarged card
+    const double radius = 118.0;
     final double angleInRadians = angleInDegrees * (math.pi / 180.0);
     final double x = radius * math.cos(angleInRadians);
     final double y = radius * math.sin(angleInRadians);
 
-    final nodeColor = isSelected ? AppColors.primary : AppColors.textPrimary;
+    final nodeColor = isSelected ? AppColors.primary : AppColors.textSecondary;
 
     return Transform.translate(
       offset: Offset(x, y),
@@ -308,24 +301,24 @@ class _CircularModeDialState extends State<CircularModeDial>
                     final double breath =
                         (isRunning && isSelected) ? _breathingAnimation.value : 1.0;
                     return Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primary.withValues(alpha: 0.12 * breath)
+                            ? AppColors.primary.withValues(alpha: 0.18 * breath)
                             : Colors.transparent,
                         shape: BoxShape.circle,
-                        boxShadow: (isSelected && isRunning)
+                        boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: AppColors.primary.withValues(alpha: 0.25 * breath),
-                                  blurRadius: 8 * breath,
-                                  spreadRadius: 1.5 * breath,
+                                  color: AppColors.primary.withValues(alpha: (isRunning ? 0.50 : 0.25) * breath),
+                                  blurRadius: (isRunning ? 16 : 10) * breath,
+                                  spreadRadius: (isRunning ? 3.0 : 1.5) * breath,
                                 ),
                               ]
                             : null,
                       ),
                       child: Opacity(
-                        opacity: (isSelected && isRunning) ? breath : 1.0,
+                        opacity: (isSelected && isRunning) ? (0.35 + 0.65 * breath) : 1.0,
                         child: BeautyHubIcon(
                           mode: mode,
                           color: nodeColor,
@@ -367,6 +360,10 @@ class _CircularModeDialState extends State<CircularModeDial>
         height: 98,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
+          border: Border.all(
+            color: isRunning ? const Color(0x66E5A95C) : const Color(0x22FFFFFF),
+            width: 3.0,
+          ),
           gradient: isRunning ? AppColors.primaryGradient : AppColors.inactiveGradient,
           boxShadow: [
             if (isRunning)

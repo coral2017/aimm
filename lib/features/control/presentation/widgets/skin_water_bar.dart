@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 class SkinWaterBar extends StatefulWidget {
   final String label;
   final double progress; // 0.0 ~ 1.0
+  final bool isHighlighted; // 是否为主攻指标高亮 (Border Glow)
   final bool isAnimating; // 是否处于运行中，驱动液面波浪动效
   final double width;
   final double height;
@@ -13,9 +14,10 @@ class SkinWaterBar extends StatefulWidget {
     super.key,
     required this.label,
     required this.progress,
+    this.isHighlighted = false,
     this.isAnimating = false,
-    this.width = 18.0,
-    this.height = 80.0,
+    this.width = 20.0,
+    this.height = 68.0,
   });
 
   @override
@@ -59,45 +61,93 @@ class _SkinWaterBarState extends State<SkinWaterBar>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 柱状胶囊容器 (Figma 18px x 80px, 完全圆角 9px)
-        Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            color: AppColors.capsuleBackground, // Figma 0xFFF0EEE9 底槽色
-            borderRadius: BorderRadius.circular(widget.width / 2),
+        // 柱状指示槽 (对齐 Figma 设计稿：极淡优雅的细边框 + 金色液体柔和漫反射投影阴影)
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(
+            begin: 0.0,
+            end: widget.progress.clamp(0.0, 1.0),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(widget.width / 2),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(
-                begin: 0.0,
-                end: widget.progress.clamp(0.0, 1.0),
-              ),
-              duration: const Duration(milliseconds: 1000),
-              curve: Curves.easeInOutCubic,
-              builder: (context, animatedValue, child) {
-                return AnimatedBuilder(
-                  animation: _waveController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      painter: _WaterLiquidPainter(
-                        progress: animatedValue,
-                        wavePhase: _waveController.value * 2 * pi,
-                        isAnimating: widget.isAnimating,
+          duration: const Duration(milliseconds: 1000),
+          curve: Curves.easeInOutCubic,
+          builder: (context, animatedValue, child) {
+            return SizedBox(
+              width: widget.width,
+              height: widget.height,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
+                children: [
+                  // 1. 设计稿规范：金黄色液体柔和漫反射投影阴影（静态常驻、温暖通透，随液面高度自然呈现）
+                  if (animatedValue > 0.02)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: (widget.height * animatedValue).clamp(4.0, widget.height),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(5.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFE5A95C).withValues(alpha: 0.33),
+                              blurRadius: 5,
+                              spreadRadius: 0.4,
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFFC8832E).withValues(alpha: 0.20),
+                              blurRadius: 9,
+                              spreadRadius: 0.6,
+                            ),
+                          ],
+                        ),
                       ),
-                      size: Size(widget.width, widget.height),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
+                    ),
+
+                  // 2. 试管槽主体（深色槽体底色 + 极淡精致的浅白微边框 + 微深色下凹阴影）
+                  Container(
+                    width: widget.width,
+                    height: widget.height,
+                    decoration: BoxDecoration(
+                      color: AppColors.waterBarTrack,
+                      borderRadius: BorderRadius.circular(5.0),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        width: 0.6,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4.4),
+                      child: AnimatedBuilder(
+                        animation: _waveController,
+                        builder: (context, child) {
+                          return CustomPaint(
+                            painter: _WaterLiquidPainter(
+                              progress: animatedValue,
+                              wavePhase: _waveController.value * 2 * pi,
+                              isAnimating: widget.isAnimating,
+                            ),
+                            size: Size(widget.width, widget.height),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
 
         const SizedBox(height: 6),
 
-        // 底部指标文字 (对齐 Figma 规范，统一优雅呈现)
+        // 底部指标文字 (四列统一样式，保持设计稿的秩序感与高级感)
         SizedBox(
           width: 76,
           child: Text(
@@ -106,9 +156,9 @@ class _SkinWaterBarState extends State<SkinWaterBar>
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontFamily: 'Roboto',
-              color: AppColors.textPrimary,
+              color: AppColors.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -142,8 +192,8 @@ class _WaterLiquidPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Color(0xFFA6855B), // 顶部温暖明亮
-          Color(0xFF8B683F), // 底部沉稳醇厚
+          AppColors.primaryLight,
+          AppColors.primaryDark,
         ],
       ).createShader(Rect.fromLTWH(0, topY, size.width, fillHeight));
 
@@ -165,6 +215,19 @@ class _WaterLiquidPainter extends CustomPainter {
     path.close();
 
     canvas.drawPath(path, paint);
+
+    // 顶部液面晶莹高光线 (Shimmer Highlight)
+    if (progress > 0.02 && progress < 0.99) {
+      final highlightPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.45)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8;
+      canvas.drawLine(
+        Offset(1, topY + 0.4),
+        Offset(size.width - 1, topY + 0.4),
+        highlightPaint,
+      );
+    }
   }
 
   @override

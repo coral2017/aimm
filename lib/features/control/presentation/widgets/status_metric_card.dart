@@ -17,11 +17,12 @@ class StatusMetricCard extends StatelessWidget {
     final metrics = controller.skinMetrics;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder, width: 1.0),
         boxShadow: const [
           BoxShadow(
             color: AppColors.shadow,
@@ -60,7 +61,7 @@ class StatusMetricCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        context.tr('bind'),
+                        context.tr('pairDevice'),
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -132,6 +133,7 @@ class StatusMetricCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.capsuleBackground,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.capsuleBorder, width: 0.8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -142,7 +144,7 @@ class StatusMetricCard extends StatelessWidget {
                           child: Icon(
                             Icons.battery_full_rounded,
                             size: 15,
-                            color: AppColors.textPrimary,
+                            color: Color(0xFF34C759),
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -151,33 +153,33 @@ class StatusMetricCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                         const SizedBox(width: 10),
 
-                        // Connected badge
+                        // Connected badge (Exact Figma 0:208 text-[#b7bcc5])
                         const Icon(
                           Icons.link_rounded,
                           size: 15,
-                          color: AppColors.primary,
+                          color: AppColors.textSecondary,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           context.tr('connected'),
                           style: const TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primaryDark,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                         const SizedBox(width: 10),
 
-                        // Timer
+                        // Timer (Exact Figma 0:229 text-[#b7bcc5])
                         const Icon(
                           Icons.access_time_rounded,
                           size: 14,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textSecondary,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -185,7 +187,7 @@ class StatusMetricCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -198,9 +200,9 @@ class StatusMetricCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // 4 Vertical Metric Water Bars with Liquid Wave
+          // 4 Vertical Metric Water Bars with Liquid Wave & Subtle Depth Shadow
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -251,8 +253,9 @@ class StatusMetricCard extends StatelessWidget {
         offset: const Offset(0, 30),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppColors.cardBorder, width: 1.0),
         ),
-        color: Colors.white,
+        color: AppColors.cardBackground,
         elevation: 8,
         shadowColor: AppColors.shadow.withValues(alpha: 0.15),
         onSelected: (locale) => controller.setLocale(locale),
@@ -278,6 +281,7 @@ class StatusMetricCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.capsuleBackground,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.capsuleBorder, width: 0.8),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -308,7 +312,7 @@ class StatusMetricCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ),

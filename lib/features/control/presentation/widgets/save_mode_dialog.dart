@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback.dart';
 import '../../models/mask_mode.dart';
 import '../../providers/mask_controller.dart';
+import 'beauty_hub_icons.dart';
 
 class SaveModeDialog extends StatefulWidget {
   const SaveModeDialog({super.key});
@@ -20,14 +22,18 @@ class SaveModeDialog extends StatefulWidget {
 }
 
 class _SaveModeDialogState extends State<SaveModeDialog> {
-  late MaskModeType _selectedMode;
+  MaskModeType? _selectedMode;
   late int _selectedGear;
 
   @override
   void initState() {
     super.initState();
     final controller = context.read<MaskController>();
-    _selectedMode = controller.selectedMode ?? MaskModeType.rejuvenating;
+    if (controller.isCombinationActive) {
+      _selectedMode = null; // 综合模式
+    } else {
+      _selectedMode = controller.selectedMode ?? MaskModeType.rejuvenating;
+    }
     _selectedGear = controller.currentGear.clamp(1, MaskController.maxGear).toInt();
   }
 
@@ -36,8 +42,11 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
     final controller = context.watch<MaskController>();
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: AppColors.cardBorder, width: 1.0),
+      ),
+      backgroundColor: AppColors.cardBackground,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       child: Padding(
         padding: const EdgeInsets.all(22.0),
@@ -66,7 +75,7 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
             ),
             const SizedBox(height: 18),
 
-            // 栏位 1: 模式
+            // 栏位 1: 模式 (包含单项模式与综合模式)
             Text(
               context.tr('mode'),
               style: const TextStyle(
@@ -81,22 +90,23 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
               decoration: BoxDecoration(
                 color: AppColors.capsuleBackground,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E0D6)),
+                border: Border.all(color: AppColors.cardBorder),
               ),
               child: DropdownButtonHideUnderline(
-                child: DropdownButton<MaskModeType>(
+                child: DropdownButton<MaskModeType?>(
                   value: _selectedMode,
+                  dropdownColor: AppColors.cardBackground,
                   isExpanded: true,
                   icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textPrimary),
-                  items: MaskModeType.values.map((mode) {
-                    return DropdownMenuItem<MaskModeType>(
-                      value: mode,
+                  items: [
+                    DropdownMenuItem<MaskModeType?>(
+                      value: null,
                       child: Row(
                         children: [
-                          Icon(mode.icon, color: AppColors.primary, size: 20),
+                          const Icon(Icons.layers_rounded, color: AppColors.primary, size: 20),
                           const SizedBox(width: 10),
                           Text(
-                            context.tr(mode.l10nKey),
+                            context.tr('combination'),
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -105,12 +115,29 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
                           ),
                         ],
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    ...MaskModeType.values.map((mode) {
+                      return DropdownMenuItem<MaskModeType?>(
+                        value: mode,
+                        child: Row(
+                          children: [
+                            BeautyHubIcon(mode: mode, color: AppColors.primary, size: 20),
+                            const SizedBox(width: 10),
+                            Text(
+                              context.tr(mode.l10nKey),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
                   onChanged: (newMode) {
-                    if (newMode != null) {
-                      setState(() => _selectedMode = newMode);
-                    }
+                    setState(() => _selectedMode = newMode);
                   },
                 ),
               ),
@@ -146,7 +173,7 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
               decoration: BoxDecoration(
                 color: AppColors.capsuleBackground,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E0D6)),
+                border: Border.all(color: AppColors.cardBorder),
               ),
               child: Row(
                 children: [
@@ -213,18 +240,20 @@ class _SaveModeDialogState extends State<SaveModeDialog> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await controller.savePreset(
-                        mode: _selectedMode,
-                        gear: _selectedGear,
-                      );
+                      if (_selectedMode == null) {
+                        await controller.savePreset(
+                          isCombination: true,
+                          gear: _selectedGear,
+                        );
+                      } else {
+                        await controller.savePreset(
+                          mode: _selectedMode,
+                          gear: _selectedGear,
+                        );
+                      }
                       if (context.mounted) {
                         Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(context.tr('modeSavedSuccess')),
-                            backgroundColor: AppColors.primary,
-                          ),
-                        );
+                        AppToast.showSuccess(context, context.tr('modeSavedSuccess'));
                       }
                     },
                     style: ElevatedButton.styleFrom(

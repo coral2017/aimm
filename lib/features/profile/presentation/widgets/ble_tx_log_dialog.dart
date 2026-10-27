@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/storage/ble_tx_log_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback.dart';
 
 class BleTxLogDialog extends StatefulWidget {
   const BleTxLogDialog({super.key});
@@ -44,14 +45,7 @@ class _BleTxLogDialogState extends State<BleTxLogDialog> {
     final text = await BleTxLogService.instance.exportFormattedText();
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.tr('logsCopied')),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+      AppToast.showSuccess(context, context.tr('logsCopied'));
     }
   }
 
